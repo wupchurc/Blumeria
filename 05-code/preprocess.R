@@ -59,193 +59,49 @@ cell_recov_count = list(length(Cells(ctrl.11.seu)), length(Cells(ctrl.12.seu)),
 dblt_exp_prcnt <- as.numeric(unlist(cell_recov_count)) / 1000 * 0.8
 
 
-# Filtering ----
-# Check mitochondrial DNA
-ctrl.11.seu[['percent.mt']] <- PercentageFeatureSet(ctrl.11.seu, pattern = "^Mt-")
-ctrl.12.seu[['percent.mt']] <- PercentageFeatureSet(ctrl.12.seu, pattern = "^Mt-")
-ctrl.14.seu[['percent.mt']] <- PercentageFeatureSet(ctrl.14.seu, pattern = "^Mt-")
-ctrl.15.seu[['percent.mt']] <- PercentageFeatureSet(ctrl.15.seu, pattern = "^Mt-")
-water.1.seu[['percent.mt']] <- PercentageFeatureSet(water.1.seu, pattern = "^Mt-")
-water.5.seu[['percent.mt']] <- PercentageFeatureSet(water.5.seu, pattern = "^Mt-")
-water.6.seu[['percent.mt']] <- PercentageFeatureSet(water.6.seu, pattern = "^Mt-")
-water.9.seu[['percent.mt']] <- PercentageFeatureSet(water.9.seu, pattern = "^Mt-")
-blum.1.seu[['percent.mt']] <- PercentageFeatureSet(blum.1.seu, pattern = "^Mt-")
-blum.3.seu[['percent.mt']] <- PercentageFeatureSet(blum.3.seu, pattern = "^Mt-")
-blum.4.seu[['percent.mt']] <- PercentageFeatureSet(blum.4.seu, pattern = "^Mt-")
-blum.7.seu[['percent.mt']] <- PercentageFeatureSet(blum.7.seu, pattern = "^Mt-")
 
-#Violin Plots
-VlnPlot(ctrl.11.seu, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3)
-quantile(ctrl.11.seu$percent.mt, probs = 0.99)
-quantile(ctrl.11.seu$nFeature_RNA, c(0.05, 0.99))
 
-VlnPlot(ctrl.12.seu, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3)
-quantile(ctrl.12.seu$percent.mt, probs = 0.99)
-quantile(ctrl.12.seu$nFeature_RNA, c(0.05, 0.99))
-
-VlnPlot(ctrl.14.seu, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3)
-quantile(ctrl.14.seu$percent.mt, probs = 0.99)
-quantile(ctrl.14.seu$nFeature_RNA, c(0.05, 0.99))
-
-VlnPlot(ctrl.15.seu, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3)
-quantile(ctrl.15.seu$percent.mt, probs = 0.99)
-quantile(ctrl.15.seu$nFeature_RNA, c(0.05, 0.99))
-
-VlnPlot(water.1.seu, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3)
-quantile(water.1.seu$percent.mt, probs = 0.99)
-quantile(water.1.seu$nFeature_RNA, c(0.05, 0.99))
-
-VlnPlot(water.5.seu, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3)
-quantile(water.5.seu$percent.mt, probs = 0.99)
-quantile(water.5.seu$nFeature_RNA, c(0.05, 0.99))
-
-VlnPlot(water.6.seu, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3)
-quantile(water.6.seu$percent.mt, probs = 0.99)
-quantile(water.6.seu$nFeature_RNA, c(0.05, 0.99))
-
-VlnPlot(water.9.seu, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3)
-quantile(water.9.seu$percent.mt, probs = 0.99)
-quantile(water.9.seu$nFeature_RNA, c(0.05, 0.99))
-
-VlnPlot(blum.1.seu, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3)
-quantile(blum.1.seu$percent.mt, probs = 0.99)
-quantile(blum.1.seu$nFeature_RNA, c(0.05, 0.99))
-
-VlnPlot(blum.3.seu, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3)
-quantile(blum.3.seu$percent.mt, probs = 0.99)
-quantile(blum.3.seu$nFeature_RNA, c(0.05, 0.99))
-
-VlnPlot(blum.4.seu, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3)
-quantile(blum.4.seu$percent.mt, probs = 0.99)
-quantile(blum.4.seu$nFeature_RNA, c(0.05, 0.99))
-
-VlnPlot(blum.7.seu, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3)
-quantile(blum.7.seu$percent.mt, probs = 0.99)
-quantile(blum.7.seu$nFeature_RNA, c(0.05, 0.99))
-
-# Subsetting/Filtering
-ctrl.11.seu <- subset(ctrl.11.seu, subset = nFeature_RNA < 4103.06 & percent.mt < 2.882178)
-ctrl.12.seu <- subset(ctrl.12.seu, subset = nFeature_RNA < 4040.52 & percent.mt < 1.348935)
-ctrl.14.seu <- subset(ctrl.14.seu, subset = nFeature_RNA < 4709.74 & percent.mt < 1.20078)
-ctrl.15.seu <- subset(ctrl.15.seu, subset = nFeature_RNA < 3922.04 & percent.mt < 2.253213)
-water.1.seu <- subset(water.1.seu, subset = nFeature_RNA < 4732.02 & percent.mt < 5.821339)
-water.5.seu <- subset(water.5.seu, subset = nFeature_RNA < 4448 & percent.mt < 5.646684)
-water.6.seu <- subset(water.6.seu, subset = nFeature_RNA < 4719.97 & percent.mt < 3.978664)
-water.9.seu <- subset(water.9.seu, subset = nFeature_RNA < 4259.4 & percent.mt < 2.022335 )
-blum.1.seu <- subset(blum.1.seu, subset = nFeature_RNA < 3931.39 & percent.mt < 2.343205)
-blum.3.seu <- subset(blum.3.seu, subset = nFeature_RNA < 3987.5 & percent.mt < 3.920576)
-blum.4.seu <- subset(blum.4.seu, subset = nFeature_RNA < 4846.44 & percent.mt < 5.313926)
-blum.7.seu <- subset(blum.7.seu, subset = nFeature_RNA < 4489.29 & percent.mt < 3.517909)
-
-# Normalize ----
-ctrl.11.seu <- NormalizeData(ctrl.11.seu)
-ctrl.12.seu <- NormalizeData(ctrl.12.seu)
-ctrl.14.seu <- NormalizeData(ctrl.14.seu)
-ctrl.15.seu <- NormalizeData(ctrl.15.seu)
-water.1.seu <- NormalizeData(water.1.seu)
-water.5.seu <- NormalizeData(water.5.seu)
-water.6.seu <- NormalizeData(water.6.seu)
-water.9.seu <- NormalizeData(water.9.seu)
-blum.1.seu <- NormalizeData(blum.1.seu)
-blum.3.seu <- NormalizeData(blum.3.seu)
-blum.4.seu <- NormalizeData(blum.4.seu)
-blum.7.seu <- NormalizeData(blum.7.seu)
-
-# Find Variable Features ----
-ctrl.11.seu <- FindVariableFeatures(ctrl.11.seu)
-ctrl.12.seu <- FindVariableFeatures(ctrl.12.seu)
-ctrl.14.seu <- FindVariableFeatures(ctrl.14.seu)
-ctrl.15.seu <- FindVariableFeatures(ctrl.15.seu)
-water.1.seu <- FindVariableFeatures(water.1.seu)
-water.5.seu <- FindVariableFeatures(water.5.seu)
-water.6.seu <- FindVariableFeatures(water.6.seu)
-water.9.seu <- FindVariableFeatures(water.9.seu)
-blum.1.seu <- FindVariableFeatures(blum.1.seu)
-blum.3.seu <- FindVariableFeatures(blum.3.seu)
-blum.4.seu <- FindVariableFeatures(blum.4.seu)
-blum.7.seu <- FindVariableFeatures(blum.7.seu)
-
-# Scale Data ----
-ctrl.11.seu <- ScaleData(ctrl.11.seu, feature = rownames(ctrl.11.seu))
-ctrl.12.seu <- ScaleData(ctrl.12.seu, feature = rownames(ctrl.12.seu))
-ctrl.14.seu <- ScaleData(ctrl.14.seu, feature = rownames(ctrl.14.seu))
-ctrl.15.seu <- ScaleData(ctrl.15.seu, feature = rownames(ctrl.15.seu))
-water.1.seu <- ScaleData(water.1.seu, feature = rownames(water.1.seu))
-water.5.seu <- ScaleData(water.5.seu, feature = rownames(water.5.seu))
-water.6.seu <- ScaleData(water.6.seu, feature = rownames(water.6.seu))
-water.9.seu <- ScaleData(water.9.seu, feature = rownames(water.9.seu))
-blum.1.seu <- ScaleData(blum.1.seu, feature = rownames(blum.1.seu))
-blum.3.seu <- ScaleData(blum.3.seu, feature = rownames(blum.3.seu))
-blum.4.seu <- ScaleData(blum.4.seu, feature = rownames(blum.4.seu))
-blum.7.seu <- ScaleData(blum.7.seu, feature = rownames(blum.7.seu))
-
-# PCA ----
-ctrl.11.seu <- RunPCA(ctrl.11.seu, features = VariableFeatures(object = ctrl.11.seu))
-ctrl.12.seu <- RunPCA(ctrl.12.seu, features = VariableFeatures(object = ctrl.12.seu))
-ctrl.14.seu <- RunPCA(ctrl.14.seu, features = VariableFeatures(object = ctrl.14.seu))
-ctrl.15.seu <- RunPCA(ctrl.15.seu, features = VariableFeatures(object = ctrl.15.seu))
-water.1.seu <- RunPCA(water.1.seu, features = VariableFeatures(object = water.1.seu))
-water.5.seu <- RunPCA(water.5.seu, features = VariableFeatures(object = water.5.seu))
-water.6.seu <- RunPCA(water.6.seu, features = VariableFeatures(object = water.6.seu))
-water.9.seu <- RunPCA(water.9.seu, features = VariableFeatures(object = water.9.seu))
-blum.1.seu <- RunPCA(blum.1.seu, features = VariableFeatures(object = blum.1.seu))
-blum.3.seu <- RunPCA(blum.3.seu, features = VariableFeatures(object = blum.3.seu))
-blum.4.seu <- RunPCA(blum.4.seu, features = VariableFeatures(object = blum.4.seu))
-blum.7.seu <- RunPCA(blum.7.seu, features = VariableFeatures(object = blum.7.seu))
-
-# Elbow Plots ----
-ElbowPlot(ctrl.11.seu)
-ElbowPlot(ctrl.12.seu)
-ElbowPlot(ctrl.14.seu)
-ElbowPlot(ctrl.15.seu)
-ElbowPlot(water.1.seu)
-ElbowPlot(water.5.seu)
-ElbowPlot(water.6.seu)
-ElbowPlot(water.9.seu)
-ElbowPlot(blum.1.seu)
-ElbowPlot(blum.3.seu)
-ElbowPlot(blum.4.seu)
+# Normalize, FindVariableFeatures, ScaleData, PCA (pK optimization needs this) ----
+ctrl.11.seu <- NormalizeData(ctrl.11.seu) %>% FindVariableFeatures() %>% ScaleData() %>% RunPCA()
+# ElbowPlot(ctrl.11.seu)
+ctrl.12.seu <- NormalizeData(ctrl.12.seu) %>% FindVariableFeatures() %>% ScaleData() %>% RunPCA()
+# ElbowPlot(ctrl.12.seu)
+ctrl.14.seu <- NormalizeData(ctrl.14.seu) %>% FindVariableFeatures() %>% ScaleData() %>% RunPCA()
+# ElbowPlot(ctrl.14.seu)
+ctrl.15.seu <- NormalizeData(ctrl.15.seu) %>% FindVariableFeatures() %>% ScaleData() %>% RunPCA()
+# ElbowPlot(ctrl.15.seu)
+water.1.seu <- NormalizeData(water.1.seu) %>% FindVariableFeatures() %>% ScaleData() %>% RunPCA()
+# ElbowPlot(water.1.seu)
+water.5.seu <- NormalizeData(water.5.seu) %>% FindVariableFeatures() %>% ScaleData() %>% RunPCA()
+# ElbowPlot(water.5.seu)
+water.6.seu <- NormalizeData(water.6.seu) %>% FindVariableFeatures() %>% ScaleData() %>% RunPCA()
+# ElbowPlot(water.6.seu)
+water.9.seu <- NormalizeData(water.9.seu) %>% FindVariableFeatures() %>% ScaleData() %>% RunPCA()
+# ElbowPlot(water.9.seu)
+blum.1.seu <- NormalizeData(blum.1.seu) %>% FindVariableFeatures() %>% ScaleData() %>% RunPCA()
+# ElbowPlot(blum.1.seu)
+blum.3.seu <- NormalizeData(blum.3.seu) %>% FindVariableFeatures() %>% ScaleData() %>% RunPCA()
+# ElbowPlot(blum.3.seu)
+blum.4.seu <- NormalizeData(blum.4.seu) %>% FindVariableFeatures() %>% ScaleData() %>% RunPCA()
+# ElbowPlot(blum.4.seu)
+blum.7.seu <- NormalizeData(blum.7.seu) %>% FindVariableFeatures() %>% ScaleData() %>% RunPCA()
 ElbowPlot(blum.7.seu)
 
 # Cluster ----
-ctrl.11.seu <- FindNeighbors(ctrl.11.seu, dims  = 1:20)
-ctrl.11.seu <- FindClusters(ctrl.11.seu)
-ctrl.11.seu <- RunUMAP(ctrl.11.seu, dims = 1:20)
-ctrl.12.seu <- FindNeighbors(ctrl.12.seu, dims  = 1:20)
-ctrl.12.seu <- FindClusters(ctrl.12.seu)
-ctrl.12.seu <- RunUMAP(ctrl.12.seu, dims = 1:20)
-ctrl.14.seu <- FindNeighbors(ctrl.14.seu, dims  = 1:20)
-ctrl.14.seu <- FindClusters(ctrl.14.seu)
-ctrl.14.seu <- RunUMAP(ctrl.14.seu, dims = 1:20)
-ctrl.15.seu <- FindNeighbors(ctrl.15.seu, dims  = 1:20)
-ctrl.15.seu <- FindClusters(ctrl.15.seu)
-ctrl.15.seu <- RunUMAP(ctrl.15.seu, dims = 1:20)
+ctrl.11.seu <- FindNeighbors(ctrl.11.seu, dims = 1:20) %>% FindClusters() %>% RunUMAP(dims = 1:20)
+ctrl.12.seu <- FindNeighbors(ctrl.12.seu, dims = 1:20) %>% FindClusters() %>% RunUMAP(dims = 1:20)
+ctrl.14.seu <- FindNeighbors(ctrl.14.seu, dims = 1:20) %>% FindClusters() %>% RunUMAP(dims = 1:20)
+ctrl.15.seu <- FindNeighbors(ctrl.15.seu, dims = 1:20) %>% FindClusters() %>% RunUMAP(dims = 1:20)
 
-water.1.seu <- FindNeighbors(water.1.seu, dims  = 1:20)
-water.1.seu <- FindClusters(water.1.seu)
-water.1.seu <- RunUMAP(water.1.seu, dims = 1:20)
-water.5.seu <- FindNeighbors(water.5.seu, dims  = 1:20)
-water.5.seu <- FindClusters(water.5.seu)
-water.5.seu <- RunUMAP(water.5.seu, dims = 1:20)
-water.6.seu <- FindNeighbors(water.6.seu, dims  = 1:20)
-water.6.seu <- FindClusters(water.6.seu)
-water.6.seu <- RunUMAP(water.6.seu, dims = 1:20)
-water.9.seu <- FindNeighbors(water.9.seu, dims  = 1:20)
-water.9.seu <- FindClusters(water.9.seu)
-water.9.seu <- RunUMAP(water.9.seu, dims = 1:20)
+water.1.seu <- FindNeighbors(water.1.seu, dims = 1:20) %>% FindClusters() %>% RunUMAP(dims = 1:20)
+water.5.seu <- FindNeighbors(water.5.seu, dims = 1:20) %>% FindClusters() %>% RunUMAP(dims = 1:20)
+water.6.seu <- FindNeighbors(water.6.seu, dims = 1:20) %>% FindClusters() %>% RunUMAP(dims = 1:20)
+water.9.seu <- FindNeighbors(water.9.seu, dims = 1:20) %>% FindClusters() %>% RunUMAP(dims = 1:20)
 
-blum.1.seu <- FindNeighbors(blum.1.seu, dims  = 1:20)
-blum.1.seu <- FindClusters(blum.1.seu)
-blum.1.seu <- RunUMAP(blum.1.seu, dims = 1:20)
-blum.3.seu <- FindNeighbors(blum.3.seu, dims  = 1:20)
-blum.3.seu <- FindClusters(blum.3.seu)
-blum.3.seu <- RunUMAP(blum.3.seu, dims = 1:20)
-blum.4.seu <- FindNeighbors(blum.4.seu, dims  = 1:20)
-blum.4.seu <- FindClusters(blum.4.seu)
-blum.4.seu <- RunUMAP(blum.4.seu, dims = 1:20)
-blum.7.seu <- FindNeighbors(blum.7.seu, dims  = 1:20)
-blum.7.seu <- FindClusters(blum.7.seu)
-blum.7.seu <- RunUMAP(blum.7.seu, dims = 1:20)
+blum.1.seu <- FindNeighbors(blum.1.seu, dims = 1:20) %>% FindClusters() %>% RunUMAP(dims = 1:20)
+blum.3.seu <- FindNeighbors(blum.3.seu, dims = 1:20) %>% FindClusters() %>% RunUMAP(dims = 1:20)
+blum.4.seu <- FindNeighbors(blum.4.seu, dims = 1:20) %>% FindClusters() %>% RunUMAP(dims = 1:20)
+blum.7.seu <- FindNeighbors(blum.7.seu, dims = 1:20) %>% FindClusters() %>% RunUMAP(dims = 1:20)
 
 # Doublets ----
 
@@ -598,6 +454,155 @@ blum.7.seu <- blum.7.seu[, blum.7.seu@meta.data[[df_col]] == "Singlet"]
 
 table(blum.7.seu@meta.data[[df_col]])
 
+
+# Strict QC - Filtering ----
+# Check mitochondrial DNA
+ctrl.11.seu[['percent.mt']] <- PercentageFeatureSet(ctrl.11.seu, pattern = "^Mt-")
+ctrl.12.seu[['percent.mt']] <- PercentageFeatureSet(ctrl.12.seu, pattern = "^Mt-")
+ctrl.14.seu[['percent.mt']] <- PercentageFeatureSet(ctrl.14.seu, pattern = "^Mt-")
+ctrl.15.seu[['percent.mt']] <- PercentageFeatureSet(ctrl.15.seu, pattern = "^Mt-")
+water.1.seu[['percent.mt']] <- PercentageFeatureSet(water.1.seu, pattern = "^Mt-")
+water.5.seu[['percent.mt']] <- PercentageFeatureSet(water.5.seu, pattern = "^Mt-")
+water.6.seu[['percent.mt']] <- PercentageFeatureSet(water.6.seu, pattern = "^Mt-")
+water.9.seu[['percent.mt']] <- PercentageFeatureSet(water.9.seu, pattern = "^Mt-")
+blum.1.seu[['percent.mt']] <- PercentageFeatureSet(blum.1.seu, pattern = "^Mt-")
+blum.3.seu[['percent.mt']] <- PercentageFeatureSet(blum.3.seu, pattern = "^Mt-")
+blum.4.seu[['percent.mt']] <- PercentageFeatureSet(blum.4.seu, pattern = "^Mt-")
+blum.7.seu[['percent.mt']] <- PercentageFeatureSet(blum.7.seu, pattern = "^Mt-")
+
+#Violin Plots and subsetting
+VlnPlot(ctrl.11.seu, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), group.by = "orig.ident", ncol = 3)
+quantile(ctrl.11.seu$nFeature_RNA, c(0.01, 0.99))
+quantile(ctrl.11.seu$nCount_RNA, c(0.01, 0.99))
+quantile(ctrl.11.seu$percent.mt, 0.99)
+ctrl.11.seu <- subset(ctrl.11.seu,
+                      subset = nFeature_RNA > quantile(ctrl.11.seu$nFeature_RNA, 0.01) &
+                        nFeature_RNA < quantile(ctrl.11.seu$nFeature_RNA, 0.99) &
+                        nCount_RNA > quantile(ctrl.11.seu$nCount_RNA, 0.01) & 
+                        nCount_RNA < quantile(ctrl.11.seu$nCount_RNA, 0.99) &
+                        percent.mt < quantile(ctrl.11.seu$percent.mt, 0.99))
+
+VlnPlot(ctrl.12.seu, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), group.by = "orig.ident", ncol = 3)
+quantile(ctrl.12.seu$nFeature_RNA, c(0.01, 0.99))
+quantile(ctrl.12.seu$nCount_RNA, c(0.01, 0.99))
+quantile(ctrl.12.seu$percent.mt, 0.99)
+ctrl.12.seu <- subset(ctrl.12.seu,
+                      subset = nFeature_RNA > quantile(ctrl.12.seu$nFeature_RNA, 0.01) &
+                        nFeature_RNA < quantile(ctrl.12.seu$nFeature_RNA, 0.99) &
+                        nCount_RNA > quantile(ctrl.12.seu$nCount_RNA, 0.01) & 
+                        nCount_RNA < quantile(ctrl.12.seu$nCount_RNA, 0.99) &
+                        percent.mt < quantile(ctrl.12.seu$percent.mt, 0.99))
+
+VlnPlot(ctrl.14.seu, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), group.by = "orig.ident", ncol = 3)
+quantile(ctrl.14.seu$nFeature_RNA, c(0.01, 0.99))
+quantile(ctrl.14.seu$nCount_RNA, c(0.01, 0.99))
+quantile(ctrl.14.seu$percent.mt, 0.99)
+ctrl.14.seu <- subset(ctrl.14.seu,
+                      subset = nFeature_RNA > quantile(ctrl.14.seu$nFeature_RNA, 0.01) &
+                        nFeature_RNA < quantile(ctrl.14.seu$nFeature_RNA, 0.99) &
+                        nCount_RNA > quantile(ctrl.14.seu$nCount_RNA, 0.01) & 
+                        nCount_RNA < quantile(ctrl.14.seu$nCount_RNA, 0.99) &
+                        percent.mt < quantile(ctrl.14.seu$percent.mt, 0.99))
+
+VlnPlot(ctrl.15.seu, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), group.by = "orig.ident", ncol = 3)
+quantile(ctrl.15.seu$nFeature_RNA, c(0.01, 0.99))
+quantile(ctrl.15.seu$nCount_RNA, c(0.01, 0.99))
+quantile(ctrl.15.seu$percent.mt, 0.99)
+ctrl.15.seu <- subset(ctrl.15.seu,
+                      subset = nFeature_RNA > quantile(ctrl.15.seu$nFeature_RNA, 0.01) &
+                        nFeature_RNA < quantile(ctrl.15.seu$nFeature_RNA, 0.99) &
+                        nCount_RNA > quantile(ctrl.15.seu$nCount_RNA, 0.01) & 
+                        nCount_RNA < quantile(ctrl.15.seu$nCount_RNA, 0.99) &
+                        percent.mt < quantile(ctrl.15.seu$percent.mt, 0.99))
+
+VlnPlot(water.1.seu, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), group.by = "orig.ident", ncol = 3)
+quantile(water.1.seu$nFeature_RNA, c(0.01, 0.99))
+quantile(water.1.seu$nCount_RNA, c(0.01, 0.99))
+quantile(water.1.seu$percent.mt, 0.99)
+water.1.seu <- subset(water.1.seu,
+                      subset = nFeature_RNA > quantile(water.1.seu$nFeature_RNA, 0.01) &
+                        nFeature_RNA < quantile(water.1.seu$nFeature_RNA, 0.99) &
+                        nCount_RNA > quantile(water.1.seu$nCount_RNA, 0.01) & 
+                        nCount_RNA < quantile(water.1.seu$nCount_RNA, 0.99) &
+                        percent.mt < quantile(water.1.seu$percent.mt, 0.99))
+
+VlnPlot(water.5.seu, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), group.by = "orig.ident", ncol = 3)
+quantile(water.5.seu$nFeature_RNA, c(0.01, 0.99))
+quantile(water.5.seu$nCount_RNA, c(0.01, 0.99))
+quantile(water.5.seu$percent.mt, 0.99)
+water.5.seu <- subset(water.5.seu,
+                      subset = nFeature_RNA > quantile(water.5.seu$nFeature_RNA, 0.01) &
+                        nFeature_RNA < quantile(water.5.seu$nFeature_RNA, 0.99) &
+                        nCount_RNA > quantile(water.5.seu$nCount_RNA, 0.01) & 
+                        nCount_RNA < quantile(water.5.seu$nCount_RNA, 0.99) &
+                        percent.mt < quantile(water.5.seu$percent.mt, 0.99))
+
+VlnPlot(water.6.seu, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), group.by = "orig.ident", ncol = 3)
+quantile(water.6.seu$nFeature_RNA, c(0.01, 0.99))
+quantile(water.6.seu$nCount_RNA, c(0.01, 0.99))
+quantile(water.6.seu$percent.mt, 0.99)
+water.6.seu <- subset(water.6.seu,
+                      subset = nFeature_RNA > quantile(water.6.seu$nFeature_RNA, 0.01) &
+                        nFeature_RNA < quantile(water.6.seu$nFeature_RNA, 0.99) &
+                        nCount_RNA > quantile(water.6.seu$nCount_RNA, 0.01) & 
+                        nCount_RNA < quantile(water.6.seu$nCount_RNA, 0.99) &
+                        percent.mt < quantile(water.6.seu$percent.mt, 0.99))
+
+VlnPlot(water.9.seu, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), group.by = "orig.ident", ncol = 3)
+quantile(water.9.seu$nFeature_RNA, c(0.01, 0.99))
+quantile(water.9.seu$nCount_RNA, c(0.01, 0.99))
+quantile(water.9.seu$percent.mt, 0.99)
+water.9.seu <- subset(water.9.seu,
+                      subset = nFeature_RNA > quantile(water.9.seu$nFeature_RNA, 0.01) &
+                        nFeature_RNA < quantile(water.9.seu$nFeature_RNA, 0.99) &
+                        nCount_RNA > quantile(water.9.seu$nCount_RNA, 0.01) & 
+                        nCount_RNA < quantile(water.9.seu$nCount_RNA, 0.99) &
+                        percent.mt < quantile(water.9.seu$percent.mt, 0.99))
+
+VlnPlot(blum.1.seu, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), group.by = "orig.ident", ncol = 3)
+quantile(blum.1.seu$nFeature_RNA, c(0.01, 0.99))
+quantile(blum.1.seu$nCount_RNA, c(0.01, 0.99))
+quantile(blum.1.seu$percent.mt, 0.99)
+blum.1.seu <- subset(blum.1.seu,
+                      subset = nFeature_RNA > quantile(blum.1.seu$nFeature_RNA, 0.01) &
+                        nFeature_RNA < quantile(blum.1.seu$nFeature_RNA, 0.99) &
+                        nCount_RNA > quantile(blum.1.seu$nCount_RNA, 0.01) & 
+                        nCount_RNA < quantile(blum.1.seu$nCount_RNA, 0.99) &
+                        percent.mt < quantile(blum.1.seu$percent.mt, 0.99))
+
+VlnPlot(blum.3.seu, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), group.by = "orig.ident", ncol = 3)
+quantile(blum.3.seu$nFeature_RNA, c(0.01, 0.99))
+quantile(blum.3.seu$nCount_RNA, c(0.01, 0.99))
+quantile(blum.3.seu$percent.mt, 0.99)
+blum.3.seu <- subset(blum.3.seu,
+                     subset = nFeature_RNA > quantile(blum.3.seu$nFeature_RNA, 0.01) &
+                       nFeature_RNA < quantile(blum.3.seu$nFeature_RNA, 0.99) &
+                       nCount_RNA > quantile(blum.3.seu$nCount_RNA, 0.01) & 
+                       nCount_RNA < quantile(blum.3.seu$nCount_RNA, 0.99) &
+                       percent.mt < quantile(blum.3.seu$percent.mt, 0.99))
+
+VlnPlot(blum.4.seu, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), group.by = "orig.ident", ncol = 3)
+quantile(blum.4.seu$nFeature_RNA, c(0.01, 0.99))
+quantile(blum.4.seu$nCount_RNA, c(0.01, 0.99))
+quantile(blum.4.seu$percent.mt, 0.99)
+blum.4.seu <- subset(blum.4.seu,
+                     subset = nFeature_RNA > quantile(blum.4.seu$nFeature_RNA, 0.01) &
+                       nFeature_RNA < quantile(blum.4.seu$nFeature_RNA, 0.99) &
+                       nCount_RNA > quantile(blum.4.seu$nCount_RNA, 0.01) & 
+                       nCount_RNA < quantile(blum.4.seu$nCount_RNA, 0.99) &
+                       percent.mt < quantile(blum.4.seu$percent.mt, 0.99))
+
+VlnPlot(blum.7.seu, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), group.by = "orig.ident", ncol = 3)
+quantile(blum.7.seu$nFeature_RNA, c(0.01, 0.99))
+quantile(blum.7.seu$nCount_RNA, c(0.01, 0.99))
+quantile(blum.7.seu$percent.mt, 0.99)
+blum.7.seu <- subset(blum.7.seu,
+                     subset = nFeature_RNA > quantile(blum.7.seu$nFeature_RNA, 0.01) &
+                       nFeature_RNA < quantile(blum.7.seu$nFeature_RNA, 0.99) &
+                       nCount_RNA > quantile(blum.7.seu$nCount_RNA, 0.01) &
+                       nCount_RNA < quantile(blum.7.seu$nCount_RNA, 0.99) &
+                       percent.mt < quantile(blum.7.seu$percent.mt, 0.99))
+
 # Add metadata ----
 
 ctrl.11.seu$sample <- "Control11"
@@ -645,8 +650,8 @@ seu_merge <- merge(ctrl.11.seu, y = list(ctrl.12.seu, ctrl.14.seu, ctrl.15.seu,
                                     "Blumeria1", "Blumeria3", "Blumeria4", "Blumeria7"),
                    project = ("All.Samples"))
 
-saveRDS(seu_merge, file = "03-analysis_scratch/seu_merge_filtered.rds")
-# seu_merge <- readRDS("03-analysis_scratch/seu_merge.rds")
+saveRDS(seu_merge, file = "03-analysis_scratch/seu_merge_strict_2.rds")
+seu_merge <- readRDS("03-analysis_scratch/seu_merge_strict.rds")
 
 seu_merge <- NormalizeData(seu_merge)
 seu_merge <- FindVariableFeatures(seu_merge)
@@ -660,7 +665,7 @@ seu_merge <- IntegrateLayers(
   new.reduction = "harmony"
 )
 
-# saveRDS(seu_merge, file = "03-analysis_scratch/seu_integrated.rds")
+saveRDS(seu_merge, file = "03-analysis_scratch/seu_integrated_strict.rds")
 # seu_merge <- readRDS("03-analysis_scratch/seu_integrated.rds")
 
 seu_merge <- FindNeighbors(seu_merge, reduction = "harmony", dims = 1:20)
