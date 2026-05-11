@@ -12,42 +12,123 @@ library(circlize)
 library(tidyr)
 
 # load processed seurat object from rds file 
-seu_integrated <- readRDS("03-analysis_scratch/seu_integrated.rds")
+seu_integrated <- readRDS("03-analysis_scratch/seu_integrated_strict.rds")
+
+seu_integrated <- FindNeighbors(seu_integrated, reduction = "harmony", dims = 1:20)
+seu_integrated <- FindClusters(seu_integrated, resolution = c(0.1, 0.2, 0.3, 0.4, 0.5))
+seu_integrated <- RunUMAP(seu_integrated, reduction = "harmony", dims = 1:20)
+
+seu_integrated$condition <- factor(
+  seu_integrated$condition,
+  levels = c("Control", "MCT-Water", "MCT-Blumeria")
+)
+DimPlot(
+  seu_integrated,
+  reduction = "umap",
+  group.by = "condition",
+  split.by = "condition",
+  label = FALSE
+)
+
+DimPlot(
+  seu_integrated,
+  reduction = "umap",
+  # group.by = "RNA_snn_res.0.3",
+  split.by = "condition",
+  label = TRUE
+)
+
+
 
 # use RNA counts/normalized data for DE
 DefaultAssay(seu_integrated) <- "RNA"
 seu_integrated <- JoinLayers(seu_integrated, assay = "RNA")
 
-# set identities to clusters (from integrated clustering)
-Idents(seu_integrated) <- "seurat_clusters"
+Idents(seu_integrated) <- "RNA_snn_res.0.3"
 
 # ---- conserved markers per cluster across conditions ----
 # Run FindConservedMarkers on clusters to help identify
 markers_cluster0  <- FindConservedMarkers(seu_integrated, ident.1 = 0,  grouping.var = "condition")
-markers_cluster1  <- FindConservedMarkers(seu_integrated, ident.1 = 1,  grouping.var = "condition")
-markers_cluster2  <- FindConservedMarkers(seu_integrated, ident.1 = 2,  grouping.var = "condition")
-markers_cluster3  <- FindConservedMarkers(seu_integrated, ident.1 = 3,  grouping.var = "condition")
-markers_cluster4  <- FindConservedMarkers(seu_integrated, ident.1 = 4,  grouping.var = "condition")
-markers_cluster5  <- FindConservedMarkers(seu_integrated, ident.1 = 5,  grouping.var = "condition")
-markers_cluster6  <- FindConservedMarkers(seu_integrated, ident.1 = 6,  grouping.var = "condition")
-markers_cluster7  <- FindConservedMarkers(seu_integrated, ident.1 = 7,  grouping.var = "condition")
-markers_cluster8  <- FindConservedMarkers(seu_integrated, ident.1 = 8,  grouping.var = "condition")
-markers_cluster9  <- FindConservedMarkers(seu_integrated, ident.1 = 9,  grouping.var = "condition")
+markers_cluster14 <- FindConservedMarkers(seu_integrated, ident.1 = 14, grouping.var = "condition")
+markers_cluster4 <- FindConservedMarkers(seu_integrated, ident.1 = 4, grouping.var = "condition")
+markers_cluster8 <- FindConservedMarkers(seu_integrated, ident.1 = 8, grouping.var = "condition")
+markers_cluster12 <- FindConservedMarkers(seu_integrated, ident.1 = 12, grouping.var = "condition")
+markers_cluster13 <- FindConservedMarkers(seu_integrated, ident.1 = 13, grouping.var = "condition")
+markers_cluster2 <- FindConservedMarkers(seu_integrated, ident.1 = 2, grouping.var = "condition")
+markers_cluster5 <- FindConservedMarkers(seu_integrated, ident.1 = 5, grouping.var = "condition")
+markers_cluster26 <- FindConservedMarkers(seu_integrated, ident.1 = 26, grouping.var = "condition")
+markers_cluster1 <- FindConservedMarkers(seu_integrated, ident.1 = 1, grouping.var = "condition")
+markers_cluster6 <- FindConservedMarkers(seu_integrated, ident.1 = 6, grouping.var = "condition")
+markers_cluster3 <- FindConservedMarkers(seu_integrated, ident.1 = 3, grouping.var = "condition")
+markers_cluster9 <- FindConservedMarkers(seu_integrated, ident.1 = 9, grouping.var = "condition")
+markers_cluster11 <- FindConservedMarkers(seu_integrated, ident.1 = 11, grouping.var = "condition")
 markers_cluster10 <- FindConservedMarkers(seu_integrated, ident.1 = 10, grouping.var = "condition")
+markers_cluster7 <- FindConservedMarkers(seu_integrated, ident.1 = 7, grouping.var = "condition")
+markers_cluster16 <- FindConservedMarkers(seu_integrated, ident.1 = 16, grouping.var = "condition")
+markers_cluster18 <- FindConservedMarkers(seu_integrated, ident.1 = 18, grouping.var = "condition")
+markers_cluster17 <- FindConservedMarkers(seu_integrated, ident.1 = 17, grouping.var = "condition")
+markers_cluster22 <- FindConservedMarkers(seu_integrated, ident.1 = 22, grouping.var = "condition")
+markers_cluster21 <- FindConservedMarkers(seu_integrated, ident.1 = 21, grouping.var = "condition")
+markers_cluster23 <- FindConservedMarkers(seu_integrated, ident.1 = 23, grouping.var = "condition")
+markers_cluster24 <- FindConservedMarkers(seu_integrated, ident.1 = 24, grouping.var = "condition")
+markers_cluster25 <- FindConservedMarkers(seu_integrated, ident.1 = 25, grouping.var = "condition")
+markers_cluster15 <- FindConservedMarkers(seu_integrated, ident.1 = 15, grouping.var = "condition")
+markers_cluster19 <- FindConservedMarkers(seu_integrated, ident.1 = 19, grouping.var = "condition")
+markers_cluster20 <- FindConservedMarkers(seu_integrated, ident.1 = 20, grouping.var = "condition")
 
 # Renaming clusters 
 print(Idents(seu_integrated))
 seu_integrated <- RenameIdents(seu_integrated, '0' = 'Fibroblasts')
-seu_integrated <- RenameIdents(seu_integrated, '1' = 'Capillary EC')
-seu_integrated <- RenameIdents(seu_integrated, '2' = 'Macrophages')
-seu_integrated <- RenameIdents(seu_integrated, '3' = 'Cardiomyocytes')
+seu_integrated <- RenameIdents(seu_integrated, '14' = 'Neutrophils')
 seu_integrated <- RenameIdents(seu_integrated, '4' = 'Pericytes')
-seu_integrated <- RenameIdents(seu_integrated, '5' = 'T cells')
-seu_integrated <- RenameIdents(seu_integrated, '6' = 'Venous EC')
-seu_integrated <- RenameIdents(seu_integrated, '7' = 'B cells')
-seu_integrated <- RenameIdents(seu_integrated, '8' = 'Lymphatic EC')
-seu_integrated <- RenameIdents(seu_integrated, '9' = 'Neutrophils')
-seu_integrated <- RenameIdents(seu_integrated, '10' = 'Neuronal')
+seu_integrated <- RenameIdents(seu_integrated, '8' = 'Capillary EC')
+seu_integrated <- RenameIdents(seu_integrated, '12' = 'Lymphatic EC')
+seu_integrated <- RenameIdents(seu_integrated, '13' = 'Lymphocytes')
+seu_integrated <- RenameIdents(seu_integrated, '26' = 'Lymphocytes')
+seu_integrated <- RenameIdents(seu_integrated, '2' = 'Arterial EC')
+seu_integrated <- RenameIdents(seu_integrated, '5' = 'Arterial EC')
+seu_integrated <- RenameIdents(seu_integrated, '1' = "Cardiomyocytes")
+seu_integrated <- RenameIdents(seu_integrated, '6' = "Cardiomyocytes")
+seu_integrated <- RenameIdents(seu_integrated, '3' = 'Macrophages')
+seu_integrated <- RenameIdents(seu_integrated, '10' = 'Lymphocytes')
+seu_integrated <- RenameIdents(seu_integrated, '7' = 'Lymphocytes')
+seu_integrated <- RenameIdents(seu_integrated, '18' = 'Fibroblasts')
+seu_integrated <- RenameIdents(seu_integrated, '22' = 'Pericytes')
+seu_integrated <- RenameIdents(seu_integrated, '21' = 'Pericytes')
+seu_integrated <- RenameIdents(seu_integrated, '23' = "Cardiomyocytes")
+seu_integrated <- RenameIdents(seu_integrated, '15' = 'Neural')
+seu_integrated <- RenameIdents(seu_integrated, '9' = 'Monocytes')
+seu_integrated <- RenameIdents(seu_integrated, '16' = 'Noise')
+seu_integrated <- RenameIdents(seu_integrated, '17' = 'Lymphocytes')
+seu_integrated <- RenameIdents(seu_integrated, '11' = 'Noise')
+seu_integrated <- RenameIdents(seu_integrated, '24' = 'Noise')
+seu_integrated <- RenameIdents(seu_integrated, '25' = 'Macrophages')
+seu_integrated <- RenameIdents(seu_integrated, '19' = 'Monocytes')
+seu_integrated <- RenameIdents(seu_integrated, '20' = 'Lymphocytes')
+
+
+# Remove noise clusters
+# List all clusters first
+table(Idents(seu_integrated))
+
+# Define clusters to REMOVE
+bad_clusters <- c("Noise")
+
+# Get all cells from bad clusters
+bad_cells <- unlist(lapply(bad_clusters, function(x) WhichCells(seu_integrated, idents = x)))
+
+# 4. Remove them ALL at once
+seu_integrated <- seu_integrated[, !colnames(seu_integrated) %in% bad_cells]
+
+# 5. Clean up clusters & refresh UMAP
+# Idents(seu_integrated) <- "seurat_clusters"
+# seu_integrated <- RunUMAP(seu_integrated, dims = 1:20)
+DimPlot(seu_integrated, label = TRUE)
+table(Idents(seu_integrated))  # Verify bad clusters gone 
+
+
+
+
 
 # Store renamed Idents in metadata column
 seu_integrated$cell_type <- Idents(seu_integrated)
@@ -57,14 +138,14 @@ celltype_order <- c(
   "Cardiomyocytes",
   "Fibroblasts",
   "Macrophages",
-  "T cells",
-  "B cells",
+  "Lymphocytes",
+  "Monocytes",
   "Neutrophils",
   "Pericytes",
   "Capillary EC",
-  "Venous EC",
+  "Arterial EC",
   "Lymphatic EC",
-  "Neuronal"
+  "Neural"
 )
 
 # Define colors matching celltype_order 
@@ -72,14 +153,14 @@ cell_cols <- c(
   "Cardiomyocytes" = "#BA1C30",
   "Fibroblasts"    = "#5FA641", 
   "Macrophages"      = "#702C8C",
-  "T cells"   = "#999999",
-  "B cells"      = "#CC79A7",
+  "Lymphocytes"   = "#999999",
+  "Monocytes"      = "#CC79A7",
   "Neutrophils"   = "#D55E00",
   "Pericytes"    = "#0072B2",
   "Capillary EC"    = "#F0E442",
-  "Venous EC"        = "#009E73",
+  "Arterial EC"        = "#009E73",
   "Lymphatic EC"        = "#56B4E9",
-  "Neuronal"       = "#E69F00"
+  "Neural"       = "#E69F00"
 )
 
 # Make cell_type a factor with that order
@@ -156,23 +237,27 @@ p_umap <- DimPlot(
   seu_integrated,
   reduction  = "umap",
   split.by   = "condition",
-  label      = TRUE,
-  label.size = 4,
+  # label      = TRUE,
+  label      = FALSE,
+  label.size = 8,
   cols       = cell_cols          # <— key line
 ) +
   NoGrid() + 
-  NoLegend() +
+  # NoLegend() +
+  coord_cartesian(clip = "off") +
   theme(
     axis.line   = element_blank(),
     axis.ticks  = element_blank(),
     axis.text   = element_blank(),
     axis.title  = element_blank(),
+    plot.margin = margin(t = 5, r = 5, b = 5, l = 30),
+    legend.text = element_text(size = 20)
   ) +
   geom_segment(
     data = mini_axes,
     aes(x = x, y = y, xend = xend, yend = yend),
     inherit.aes = FALSE,
-    arrow = arrow(type = "closed", length = unit(4, "pt")),
+    arrow = arrow(type = "closed", length = unit(3, "pt")),
     linewidth = 0.4
   ) +
   annotate("text",
@@ -222,10 +307,10 @@ p_combined <- p_umap / p_bar + plot_layout(heights = c(12, 1))
 print(p_combined)
 
 ggsave(
-  filename = "04-results/umap_rel_abundance.png",
+  filename = "04-results/umap_rel_abundance_legend.png",
   plot     = p_combined,
-  width    = 15,    # adjust as needed
-  height   = 7.5,
+  width    = 24,    # adjust as needed
+  height   = 8,
   units = "in",
   dpi      = 300
 )
