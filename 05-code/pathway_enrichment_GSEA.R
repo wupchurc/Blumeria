@@ -7,10 +7,7 @@ library(ggtangle)
 library(ggplot2)
 
 cm_results <- readRDS("03-analysis_scratch/DEG_Cardiomyocytes.rds")
-fb_results <- readRDS("03-analysis_scratch/DEG_Fibroblasts.rds")
 mac_results <- readRDS("03-analysis_scratch/DEG_Macrophages.rds")
-nphl_results <- readRDS("03-analysis_scratch/DEG_Neutrophils.rds")
-peri_results <- readRDS("03-analysis_scratch/DEG_Pericytes.rds")
 
 # ---- Combined GSEA ----
 analyze_celltype_gsea <- function(results_obj, cell_name) {
@@ -109,17 +106,6 @@ write.csv(
   row.names = FALSE
 )
 
-# ---- Fibroblasts ----
-
-gsea_res <- analyze_celltype_gsea(fb_results, "Fibroblasts")
-
-gsea_df <- as.data.frame(gsea_res$gsea)
-head(gsea_df)
-write.csv(
-  gsea_df,
-  file = "04-results/FB_GSEA_GO.csv",
-  row.names = FALSE
-)
 
 # ---- Macrophages ----
 
@@ -135,7 +121,7 @@ write.csv(
 
 
 
-# ----
+# ---- Dotplots ----
 # Simplify the combined result
 gsea_simplified <- simplify(gsea_res$gsea, cutoff = 0.7, by = "p.adjust", 
                             measure = "Wang")
@@ -146,18 +132,67 @@ write.csv(
   row.names = FALSE
 )
 
+# simplified dotplot
 dotplot(gsea_simplified, showCategory = 5, split = ".sign") +
   facet_grid(. ~ .sign) +
-  ggtitle("CM GSEA - Top Terms") +
-  theme(axis.text.y = element_text(size = 9))
+  ggtitle("Macrophages") +
+  theme(
+    axis.text.y = element_text(size = 12, face = "bold"),
+    axis.text.x = element_text(size = 11),
+    plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
+    strip.text = element_text(size = 13, face = "bold"),
+    legend.position = "right",
+    legend.text = element_text(size = 10)
+  ) +
+  labs(x = "", y = "")
 
 
-# 
-dotplot(gsea_res$gsea, showCategory = 5, split = ".sign", size = "Count") + 
+
+# two separate plots for activated and suppressed
+# Create a copy for activated only
+gsea_activated <- gsea_simplified
+gsea_activated@compareClusterResult <- gsea_activated@compareClusterResult[
+  gsea_activated@compareClusterResult$NES > 0, ]
+
+# Create a copy for suppressed only
+gsea_suppressed <- gsea_simplified
+gsea_suppressed@compareClusterResult <- gsea_suppressed@compareClusterResult[
+  gsea_suppressed@compareClusterResult$NES < 0, ]
+
+# Plot each
+p1 <- dotplot(gsea_activated, showCategory = 5) +
+  ggtitle("Activated Pathways") +
+  theme(axis.text.y = element_text(size = 12, face = "bold"),
+        axis.text.x = element_text(size = 11),
+        plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
+        strip.text = element_text(size = 13, face = "bold"),
+        legend.position = "right",
+        legend.text = element_text(size = 10)) +
+  labs(x = '')
+
+p2 <- dotplot(gsea_suppressed, showCategory = 5) +
+  ggtitle("Suppressed Pathways") +
+  theme(axis.text.y = element_text(size = 12, face = "bold"),
+        axis.text.x = element_text(size = 11),
+        plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
+        strip.text = element_text(size = 13, face = "bold"),
+        legend.position = "right",
+        legend.text = element_text(size = 10)) +
+  labs(x = '')
+
+# Stack vertically
+library(patchwork)
+p1 / p2
+
+ 
+
+
+
+# non simplified dot plot
+dotplot(gsea_res$gsea, showCategory = 15, split = ".sign", size = "Count") + 
   facet_grid(. ~ .sign) + 
-  ggtitle("Pericytes - GSEA") +
+  ggtitle("CM - GSEA") +
   theme(axis.text.y = element_text(size = 8))
-
 
 # ---- single plots ---- 
 gsea_single <- make_single_gsea_list(gsea_res)
@@ -193,7 +228,7 @@ cnet_blum <- cnetplot(gsea_single$water_vs_blum,
 print(cnet_blum)
 
 #
-dotplot(gsea_single$water_vs_ctrl, showCategory = 30) + ggtitle("CM water_vs_ctrl")
+dotplot(gsea_single$water_vs_ctrl, showCategory = 10, split = ".sign") + ggtitle("CM water_vs_ctrl")
 dotplot(gsea_single$water_vs_blum, showCategory = 10) + ggtitle("CM water_vs_blum")
 
 
