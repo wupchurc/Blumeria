@@ -1,0 +1,1600 @@
+
+```{r}
+library(Seurat)
+library(ggplot2)
+library(tidyr)
+library(gridExtra)
+library(tidyverse)
+library(DoubletFinder)
+library(DESeq2)
+library(patchwork)
+library(presto)
+library(scCustomize)
+library(SummarizedExperiment)
+library(RColorBrewer)
+library(circlize)
+library(EnhancedVolcano)
+library(clusterProfiler)
+library(enrichplot)
+library(org.Rn.eg.db)
+library(ggtangle)
+```
+
+```{r}
+#If you don't already have data for the specific cell types, load in the
+#integrated seurat file, find conserved markers for each cluster, 
+#rename the clusters based on cell type, and extract the relevant cells for
+#each cell type. 
+
+#Load the integrated Seurat file
+seu_integrated <- readRDS("./03-analysis/seu_integrated_strict.rds")
+
+#Find conserved markers
+DefaultAssay(seu_integrated) <- "RNA"
+seu_integrated <- JoinLayers(seu_integrated, assay = "RNA")
+
+Idents(seu_integrated) <- "RNA_snn_res.0.3"
+
+markers_cluster0  <- FindConservedMarkers(seu_integrated, ident.1 = 0,  grouping.var = "condition")
+markers_cluster14 <- FindConservedMarkers(seu_integrated, ident.1 = 14, grouping.var = "condition")
+markers_cluster4 <- FindConservedMarkers(seu_integrated, ident.1 = 4, grouping.var = "condition")
+markers_cluster8 <- FindConservedMarkers(seu_integrated, ident.1 = 8, grouping.var = "condition")
+markers_cluster12 <- FindConservedMarkers(seu_integrated, ident.1 = 12, grouping.var = "condition")
+markers_cluster13 <- FindConservedMarkers(seu_integrated, ident.1 = 13, grouping.var = "condition")
+markers_cluster2 <- FindConservedMarkers(seu_integrated, ident.1 = 2, grouping.var = "condition")
+markers_cluster5 <- FindConservedMarkers(seu_integrated, ident.1 = 5, grouping.var = "condition")
+markers_cluster26 <- FindConservedMarkers(seu_integrated, ident.1 = 26, grouping.var = "condition")
+markers_cluster1 <- FindConservedMarkers(seu_integrated, ident.1 = 1, grouping.var = "condition")
+markers_cluster6 <- FindConservedMarkers(seu_integrated, ident.1 = 6, grouping.var = "condition")
+markers_cluster3 <- FindConservedMarkers(seu_integrated, ident.1 = 3, grouping.var = "condition")
+markers_cluster9 <- FindConservedMarkers(seu_integrated, ident.1 = 9, grouping.var = "condition")
+markers_cluster11 <- FindConservedMarkers(seu_integrated, ident.1 = 11, grouping.var = "condition")
+markers_cluster10 <- FindConservedMarkers(seu_integrated, ident.1 = 10, grouping.var = "condition")
+markers_cluster7 <- FindConservedMarkers(seu_integrated, ident.1 = 7, grouping.var = "condition")
+markers_cluster16 <- FindConservedMarkers(seu_integrated, ident.1 = 16, grouping.var = "condition")
+markers_cluster18 <- FindConservedMarkers(seu_integrated, ident.1 = 18, grouping.var = "condition")
+markers_cluster17 <- FindConservedMarkers(seu_integrated, ident.1 = 17, grouping.var = "condition")
+markers_cluster22 <- FindConservedMarkers(seu_integrated, ident.1 = 22, grouping.var = "condition")
+markers_cluster21 <- FindConservedMarkers(seu_integrated, ident.1 = 21, grouping.var = "condition")
+markers_cluster23 <- FindConservedMarkers(seu_integrated, ident.1 = 23, grouping.var = "condition")
+markers_cluster24 <- FindConservedMarkers(seu_integrated, ident.1 = 24, grouping.var = "condition")
+markers_cluster25 <- FindConservedMarkers(seu_integrated, ident.1 = 25, grouping.var = "condition")
+markers_cluster15 <- FindConservedMarkers(seu_integrated, ident.1 = 15, grouping.var = "condition")
+markers_cluster19 <- FindConservedMarkers(seu_integrated, ident.1 = 19, grouping.var = "condition")
+markers_cluster20 <- FindConservedMarkers(seu_integrated, ident.1 = 20, grouping.var = "condition")
+
+#Rename
+seu_integrated <- RenameIdents(seu_integrated, '0' = 'Fibroblasts')
+seu_integrated <- RenameIdents(seu_integrated, '14' = 'Neutrophils')
+seu_integrated <- RenameIdents(seu_integrated, '4' = 'Pericytes')
+seu_integrated <- RenameIdents(seu_integrated, '8' = 'Endocardial EC')
+seu_integrated <- RenameIdents(seu_integrated, '12' = 'Lymphatic EC')
+seu_integrated <- RenameIdents(seu_integrated, '13' = 'Lymphocytes')
+seu_integrated <- RenameIdents(seu_integrated, '26' = 'Lymphocytes')
+seu_integrated <- RenameIdents(seu_integrated, '2' = 'Vascular EC')
+seu_integrated <- RenameIdents(seu_integrated, '5' = 'Vascular EC')
+seu_integrated <- RenameIdents(seu_integrated, '1' = "Cardiomyocytes")
+seu_integrated <- RenameIdents(seu_integrated, '6' = "Cardiomyocytes")
+seu_integrated <- RenameIdents(seu_integrated, '3' = 'Macrophages')
+seu_integrated <- RenameIdents(seu_integrated, '10' = 'Lymphocytes')
+seu_integrated <- RenameIdents(seu_integrated, '7' = 'Lymphocytes')
+seu_integrated <- RenameIdents(seu_integrated, '18' = 'Fibroblasts')
+seu_integrated <- RenameIdents(seu_integrated, '22' = 'Pericytes')
+seu_integrated <- RenameIdents(seu_integrated, '21' = 'Pericytes')
+seu_integrated <- RenameIdents(seu_integrated, '23' = "Cardiomyocytes")
+seu_integrated <- RenameIdents(seu_integrated, '15' = 'Glial Cells')
+seu_integrated <- RenameIdents(seu_integrated, '9' = 'Monocytes')
+seu_integrated <- RenameIdents(seu_integrated, '16' = 'Noise') # high Mt-co2, Mt-co3, Mt-cyb, Mt-nd4
+seu_integrated <- RenameIdents(seu_integrated, '17' = 'Lymphocytes')
+seu_integrated <- RenameIdents(seu_integrated, '11' = 'Dendritic Cells')
+seu_integrated <- RenameIdents(seu_integrated, '24' = 'Noise') # contaminated immune cells?
+seu_integrated <- RenameIdents(seu_integrated, '25' = 'Macrophages')
+seu_integrated <- RenameIdents(seu_integrated, '19' = 'Monocytes')
+seu_integrated <- RenameIdents(seu_integrated, '20' = 'Lymphocytes')
+
+#Extract cardiomyocytes
+cm_data  <- subset(seu_integrated, idents = c("Cardiomyocytes"))
+#Save
+saveRDS(cm_data, "./03-analysis/cm_data.rds")
+
+#Extract macrophages
+macro_data  <- subset(seu_integrated, idents = c("Macrophages"))
+#Save
+saveRDS(macro_data, "./03-analysis/macro_data.rds")
+
+#Extract fibroblasts 
+fibro_data  <- subset(seu_integrated, idents = c("Fibroblasts"))
+#Save
+saveRDS(cm_data, "./03-analysis/fibro_data.rds")
+```
+
+```{r}
+#Cardiomyocyte section
+```
+
+```{r}
+#Read in data if necessary and then umap. 
+cm_data <- readRDS("./cm_data.rds")
+
+cm_data <- FindNeighbors(cm_data, reduction = "harmony", dims = 1:50)
+cm_data <- FindClusters(cm_data, resolution = c(0.2, 0.3, 0.4))
+cm_data <- RunUMAP(cm_data, reduction = "harmony", dims = 1:50)
+
+cm_data$condition <- factor(
+  cm_data$condition,
+  levels = c("Control", "MCT-Water", "MCT-Blumeria")
+)
+DimPlot(
+  cm_data,
+  reduction = "umap",
+  group.by = "condition",
+  split.by = "condition",
+  label = FALSE
+)
+
+DimPlot(
+  cm_data,
+  reduction = "umap",
+  group.by = "RNA_snn_res.0.2",
+  split.by = "condition",
+  label = TRUE
+)
+```
+
+```{r}
+#Find markers 
+
+DefaultAssay(cm_data) <- "RNA"
+cm_data <- JoinLayers(cm_data, assay = "RNA")
+
+Idents(cm_data) <- "RNA_snn_res.0.3"
+
+cm_markers_cluster0  <- FindConservedMarkers(cm_data, ident.1 = 0, grouping.var = "condition")
+
+cm_markers_cluster1 <- FindConservedMarkers(cm_data, ident.1 = 1, grouping.var = "condition")
+
+cm_markers_cluster2 <- FindConservedMarkers(cm_data, ident.1 = 2, grouping.var = "condition")
+
+cm_markers_cluster3 <- FindConservedMarkers(cm_data, ident.1 = 3, grouping.var = "condition")
+
+cm_markers_cluster4 <- FindConservedMarkers(cm_data, ident.1 = 4, grouping.var = "condition")
+```
+
+```{r}
+#Relative quantification
+
+# Store renamed Idents in metadata column
+cm_data$cell_type <- Idents(cm_data)
+
+# Set the desired order of cell types
+celltype_order <- c(
+  "0",
+  "1",
+  "2",
+  "3",
+  "4"
+)
+
+# Define colors matching celltype_order 
+cell_cols <- c(
+  "0"      = "#702C8C",
+  "1"   = "#D55E00",
+  "2"    = "#0072B2",
+  "3"    = "#F0E442",
+  "4"        = "#009E73"
+
+)
+
+# Make cell_type a factor with that order
+cm_data$cell_type <- factor(
+  cm_data$cell_type,
+  levels = celltype_order
+)
+
+# After setting celltype_order, reverse it for plotting consistency
+plot_order <- rev(celltype_order)  # Reverse for ggplot/barplot
+# Set Idents and cell_type with plot order
+Idents(cm_data) <- factor(cm_data$cell_type, levels = plot_order)
+cm_data$cell_type <- factor(cm_data$cell_type, levels = plot_order)
+# Now cell_types and plots follow your desired order
+cell_types <- levels(Idents(cm_data))
+
+origin_x <- -15
+origin_y <- -15
+len      <- 5   # length of mini-axes in UMAP units
+
+mini_axes <- data.frame(
+  x    = c(origin_x, origin_x),
+  y    = c(origin_y, origin_y),
+  xend = c(origin_x + len, origin_x),
+  yend = c(origin_y,        origin_y + len)
+)
+# Use same palette in UMAP
+p_umap <- DimPlot(
+  cm_data,
+  reduction  = "umap",
+  split.by   = "condition",
+  # label      = TRUE,
+  label      = FALSE,
+  label.size = 8,
+  cols       = cell_cols          # <— key line
+) +
+  NoGrid() + 
+  # NoLegend() +
+  coord_cartesian(clip = "off") +
+  theme(
+    axis.line   = element_blank(),
+    axis.ticks  = element_blank(),
+    axis.text   = element_blank(),
+    axis.title  = element_blank(),
+    plot.margin = margin(t = 5, r = 5, b = 5, l = 30),
+    legend.text = element_text(size = 20)
+  ) +
+  geom_segment(
+    data = mini_axes,
+    aes(x = x, y = y, xend = xend, yend = yend),
+    inherit.aes = FALSE,
+    arrow = arrow(type = "closed", length = unit(3, "pt")),
+    linewidth = 0.4
+  ) +
+  annotate("text",
+           x = origin_x + len, y = origin_y,
+           label = "UMAP1", vjust = 1.5, size = 3) +
+  annotate("text",
+           x = origin_x - 0.25, y = origin_y + len,
+           label = "UMAP2", hjust = 0.5, angle = 90, size = 3)
+
+# counts per cell type per condition
+tab_counts <- table(
+  CellType  = Idents(cm_data),
+  Condition = cm_data$condition
+)
+
+# relative proportions within each condition (columns sum to 1)
+tab_prop <- prop.table(tab_counts, margin = 2)
+df_prop <- as.data.frame(tab_prop) %>%
+  dplyr::rename(Proportion = Freq)
+
+p_bar <- ggplot(df_prop,
+                aes(x = 1, y = Proportion, fill = CellType)) +
+  geom_col(position = "fill", color = "black", width = 1) +
+  coord_flip() +
+  facet_wrap(~ Condition, nrow = 1) +
+  scale_fill_manual(values = cell_cols, guide = "none") +
+  xlab(NULL) +   # now appears above the bars
+  ylab(NULL) +
+  theme_minimal() +
+  labs(title = "Relative Abundance (%)") +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    strip.background = element_blank(),
+    strip.text       = element_blank(),
+    panel.background = element_blank(),
+    plot.background  = element_blank(),
+    panel.grid       = element_blank(),
+    axis.text.x      = element_blank(),  # keep digits hidden
+    axis.ticks.x     = element_blank(),
+    axis.text.y      = element_blank(),   
+    axis.ticks.y     = element_blank()
+  )
+
+# plot combined graphs
+cm_p_combined <- p_umap / p_bar + plot_layout(heights = c(12, 1))
+
+print(cm_p_combined)
+```
+
+```{r}
+#Begin analysis of DE genes
+
+#Consolidated Pseudobulking and DESeq2 Function
+run_pseudobulk_deg_cm <- function(seu_obj, cell_type, min_counts = 10, alpha = 0.05,
+                               plot_title = NULL, save_results = FALSE) {
+  
+  # Set assay to RNA for raw counts
+  DefaultAssay(seu_obj) <- "RNA"
+  
+  # Subset to specified cell type
+  cells <- WhichCells(seu_obj, idents = cell_type)
+  if (length(cells) == 0) {
+    stop(paste("No cells found for cell type:", cell_type))
+  }
+  
+  seu_subset <- subset(seu_obj, cells = cells)
+  cat("Analyzing", length(cells), "cells for", cell_type, "\n") # look at, maybe remove
+  
+  # Pseudobulk Matrix by sample (orig.ident)
+  cts <- AggregateExpression(seu_subset, assays = "RNA", group.by = "orig.ident",
+                             slot = "counts", return.seurat = FALSE)
+  cts <- cts$RNA
+  
+  # Prepare Metadata
+  colData <- data.frame(samples = colnames(cts)) %>%
+    mutate(
+      condition = case_when(
+        str_detect(samples, "Blumeria") ~ "MCT-Blumeria",
+        str_detect(samples, "Water") ~ "MCT-Water",
+        str_detect(samples, "Control") ~ "Control"
+      )
+    ) %>%
+    column_to_rownames(var = "samples")
+  
+  # Create DESeq2 object
+  dds <- DESeqDataSetFromMatrix(
+    countData = cts,
+    colData = colData,
+    design = ~ condition)
+  
+  # Filter low-count genes
+  keep <- rowSums(counts(dds)) >= min_counts
+  dds <- dds[keep, ]
+  cat("Filtered to", nrow(dds), "genes (min total counts =", min_counts, ")\n")
+  
+  # Set reference level 
+  dds$condition <- relevel(dds$condition, ref = "Control")
+  
+  # Run DESeq2
+  dds <- DESeq(dds)
+  
+  # Extract contrasts
+  res_water_vs_ctrl <- results(dds, contrast = c("condition", "MCT-Water", "Control"),
+                               alpha = alpha)
+  res_blum_vs_ctrl <- results(dds, contrast = c("condition", "MCT-Blumeria", "Control"),
+                              alpha = alpha)
+  res_blum_vs_water <- results(dds, contrast = c("condition", "MCT-Blumeria", "MCT-Water"), 
+                               alpha = alpha)
+  res_water_vs_blum <- results(dds, contrast = c("condition", "MCT-Water", "MCT-Blumeria"),
+                               alpha = alpha)
+  
+  # Print summaries
+  cat("\n=== DESeq2 Results Summary for", cell_type, "===\n")
+  cat("Water vs Control:\n"); summary(res_water_vs_ctrl)
+  cat("\nBlumeria vs Control:\n"); summary(res_blum_vs_ctrl)
+  cat("\nBlumeria vs Water:\n"); summary(res_blum_vs_water)
+  cat("\nWater vs Blumeria:\n"); summary(res_water_vs_blum)
+  
+  # Normalize data for PCA
+  # rld <- vst(dds, blind = FALSE)
+  
+  # Generate plots
+  # title <- ifelse(is.null(plot_title), cell_type, plot_title)
+  
+  # p_pca <- plotPCA(rld, intgroup = "condition") +
+  # stat_ellipse(level = 0.95, alpha = 0.3, geom = "polygon") +
+  # ggtitle(paste("Pseudoulk PCA:", title))
+  
+  # p_ma_water <- plotMA(res_water_vs_ctrl) + ggtitle("MA: Water vs Control")
+  # p_ma_water_blum <- plotMA(res_water_vs_blum) + ggtitle("MA: Water vs Blumeria")
+  
+  # Display plots
+  # print(p_pca)
+  # print(p_ma_water)
+  # print(p_ma_water_blum)
+  
+  # Save results if requested
+  if (save_results) {
+    results_list <- list(
+      water_vs_ctrl = res_water_vs_ctrl,
+      blum_vs_ctrl = res_blum_vs_ctrl,
+      blum_vs_water = res_blum_vs_water,
+      water_vs_blum = res_water_vs_blum
+      # dds = dds
+      # rld = rld
+    )
+    
+    filename <- paste0("cm_DEG_", gsub("[^A-Za-z0-9]", "_", cell_type), ".rds")
+    saveRDS(results_list, file = paste0("./03-analysis/", filename))
+    cat("Results saved to:", filename, "\n")
+    
+  }
+  
+  # Return results
+  return(
+    results <- list(
+      water_vs_ctrl = res_water_vs_ctrl,
+      blum_vs_ctrl = res_blum_vs_ctrl,
+      blum_vs_water = res_blum_vs_water,
+      water_vs_blum = res_water_vs_blum,
+      dds = dds
+      # rld = rld
+    )
+  )
+}
+```
+
+```{r}
+# Run DSEq2 on all cell types for cm
+
+cm_deg_results <- list()
+cell_types <- levels(cm_data)  
+for (cell_type in cell_types) {
+  cat("\\\\n=== Processing", cell_type, "===\\\\n")
+  cm_deg_results[[cell_type]] <- run_pseudobulk_deg_cm(cm_data, cell_type, 
+                                                 alpha = 0.1, save_results = FALSE)
+}
+```
+
+```{r}
+# Extract significant DE gene counts
+cm_sig_counts <- data.frame(
+  cell_type = character(),
+  contrast = character(),
+  upregulated = numeric(),
+  downregulated = numeric()
+)
+
+for (cell_type in cell_types) {
+  res <- cm_deg_results[[cell_type]]
+  
+  # Water vs Control
+  sig_up_water <- sum(res$water_vs_ctrl$padj < 0.2 & res$water_vs_ctrl$log2FoldChange > 0, na.rm = TRUE)
+  sig_down_water <- sum(res$water_vs_ctrl$padj < 0.2 & res$water_vs_ctrl$log2FoldChange < 0, na.rm = TRUE)
+  
+  # Water vs Blumeria
+  sig_up_water_blum <- sum(res$water_vs_blum$padj < 0.2 & res$water_vs_blum$log2FoldChange > 0, na.rm = TRUE)
+  sig_down_water_blum <- sum(res$water_vs_blum$padj < 0.2 & res$water_vs_blum$log2FoldChange < 0, na.rm = TRUE)
+  
+  cm_sig_counts <- rbind(cm_sig_counts, data.frame(
+    cell_type = cell_type,
+    contrast = "Water vs Ctrl",
+    upregulated = sig_up_water,
+    downregulated = sig_down_water
+  ))
+  
+  cm_sig_counts <- rbind(cm_sig_counts, data.frame(
+    cell_type = cell_type,
+    contrast = "Water vs Blumeria",
+    upregulated = sig_up_water_blum,
+    downregulated = sig_down_water_blum
+  ))
+}
+
+# Create bar plot
+cm_sig_counts_long <- cm_sig_counts %>%
+  pivot_longer(cols = c(upregulated, downregulated), 
+               names_to = "direction", values_to = "count")
+
+# Use your cell type order and colors
+cm_sig_counts_long$cell_type <- factor(cm_sig_counts_long$cell_type, levels = rev(cell_types))
+cm_sig_counts_long$direction <- factor(cm_sig_counts_long$direction, 
+                                    levels = c("upregulated", "downregulated"))
+cm_sig_counts_long$contrast <- factor(cm_sig_counts_long$contrast, 
+                                   levels = c("Water vs Ctrl", 
+                                              "Water vs Blumeria"
+                                   ))
+
+cm_p_sig <- ggplot(cm_sig_counts_long, aes(x = cell_type, y = count, fill = direction)) +
+  geom_col(position = "dodge") +
+  facet_wrap(~ contrast, scales = "free_y", ncol = 3) +
+  scale_fill_manual(values = c("upregulated" = "#E31A1C", "downregulated" = "#1F78B4")) +
+  labs(title = "Significant DE Genes (padj < 0.2) Across Cell Types",
+       x = "Cell Type", y = "Number of DE Genes",
+       fill = "Direction") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "bottom")
+
+print(cm_p_sig)
+```
+
+```{r}
+#Get DE genes for all cm subclusters
+run_pseudobulk_deg_cm(cm_data, "0", alpha = 0.2, save_results = TRUE)
+run_pseudobulk_deg_cm(cm_data, "1", alpha = 0.2, save_results = TRUE)
+run_pseudobulk_deg_cm(cm_data, "2", alpha = 0.2, save_results = TRUE)
+run_pseudobulk_deg_cm(cm_data, "3", alpha = 0.2, save_results = TRUE)
+run_pseudobulk_deg_cm(cm_data, "4", alpha = 0.2, save_results = TRUE)
+```
+
+```{r}
+# Create GSEA function
+# Use for all 3 cell types
+
+analyze_celltype_gsea <- function(results_obj, cell_name) {
+  
+  # Function to get ranked list
+  get_ranked_list <- function(res) {
+    df <- as.data.frame(res)
+    df$gene <- rownames(res)
+    id_map <- bitr(df$gene, fromType="SYMBOL", 
+                   toType="ENTREZID", OrgDb=org.Rn.eg.db)
+    df <- merge(df, id_map, by.x="gene", by.y="SYMBOL")
+    df <- df[!is.na(df$ENTREZID) & !is.na(df$log2FoldChange), ]
+    gene_list <- df$log2FoldChange
+    names(gene_list) <- df$ENTREZID
+    gene_list <- sort(gene_list, decreasing = TRUE)
+    return(gene_list)
+  }
+  
+  ranked_lists <- list(
+    water_vs_ctrl = get_ranked_list(results_obj$water_vs_ctrl),
+    water_vs_blum = get_ranked_list(results_obj$water_vs_blum)
+  )
+  
+  gsea_df <- do.call(rbind, lapply(names(ranked_lists), function(nm) {
+    data.frame(
+      ENTREZID = names(ranked_lists[[nm]]),
+      log2FoldChange = ranked_lists[[nm]],
+      contrast_name = nm,
+      stringsAsFactors = FALSE
+    )
+  }))
+  # Set desired order here
+  gsea_df$contrast_name <- factor(gsea_df$contrast_name,
+                                  levels = c("water_vs_ctrl", "water_vs_blum"))
+    
+  comp_gsea <- compareCluster(
+    ENTREZID | log2FoldChange ~ contrast_name,
+    data = gsea_df,
+    fun = "gseGO",
+    OrgDb = org.Rn.eg.db,
+    ont = "BP",
+    keyType = "ENTREZID",
+    pvalueCutoff = 0.05,
+    pAdjustMethod = "BH",
+    minGSSize = 10,
+    maxGSSize = 500,
+    verbose = FALSE
+  )
+    
+  # Make sure Cluster is ordered consistently for plotting
+  comp_gsea@compareClusterResult$Cluster <- factor(
+    comp_gsea@compareClusterResult$Cluster,
+    levels = c("water_vs_ctrl", "water_vs_blum")
+  )
+    
+  p_gsea <- dotplot(comp_gsea, showCategory = 5, font.size = 8,
+                      split = ".sign") +
+      facet_grid(. ~ .sign) +
+      ggtitle(paste(cell_name, "- GO (BP)"))
+    
+  print(p_gsea)
+    
+  list(gsea = comp_gsea, ranked_lists = ranked_lists)
+}
+```
+
+```{r}
+# ---- CM cluster 0 ----
+cm_zero_results <- readRDS("./03-analysis/cm_DEG_0.rds")
+
+cm_zero_gsea_res <- analyze_celltype_gsea(cm_zero_results, "0")
+
+cm_zero_gsea_df <- as.data.frame(cm_zero_gsea_res$gsea)
+head(cm_zero_gsea_df)
+write.csv(
+  cm_zero_gsea_df,
+  file = "./CM_0_GSEA_GO.csv",
+  row.names = FALSE
+)
+```
+
+```{r}
+# ---- CM cluster 1 ----
+cm_one_results <- readRDS("./03-analysis/cm_DEG_1.rds")
+
+cm_one_gsea_res <- analyze_celltype_gsea(cm_one_results, "1")
+
+cm_one_gsea_df <- as.data.frame(cm_one_gsea_res$gsea)
+head(cm_one_gsea_df)
+write.csv(
+  cm_one_gsea_df,
+  file = "./CM_1_GSEA_GO.csv",
+  row.names = FALSE
+)
+```
+
+```{r}
+# ---- CM cluster 2 ----
+cm_two_results <- readRDS("./03-analysis/cm_DEG_2.rds")
+
+cm_two_gsea_res <- analyze_celltype_gsea(cm_two_results, "2")
+
+cm_two_gsea_df <- as.data.frame(cm_two_gsea_res$gsea)
+head(cm_two_gsea_df)
+write.csv(
+  cm_two_gsea_df,
+  file = "./CM_2_GSEA_GO.csv",
+  row.names = FALSE
+)
+```
+
+```{r}
+# ---- CM cluster 3 ----
+cm_three_results <- readRDS("./03-analysis/cm_DEG_3.rds")
+
+cm_three_gsea_res <- analyze_celltype_gsea(cm_three_results, "3")
+
+cm_three_gsea_df <- as.data.frame(cm_three_gsea_res$gsea)
+head(cm_three_gsea_df)
+write.csv(
+  cm_three_gsea_df,
+  file = "./CM_3_GSEA_GO.csv",
+  row.names = FALSE
+)
+```
+
+```{r}
+# ---- CM cluster 4 ----
+cm_four_results <- readRDS("./03-analysis/cm_DEG_4.rds")
+
+cm_four_gsea_res <- analyze_celltype_gsea(cm_four_results, "4")
+
+cm_four_gsea_df <- as.data.frame(cm_four_gsea_res$gsea)
+head(cm_four_gsea_df)
+write.csv(
+  cm_four_gsea_df,
+  file = "./CM_4_GSEA_GO.csv",
+  row.names = FALSE
+)
+```
+
+
+
+
+
+
+```{r}
+#Macrophage section
+```
+
+```{r}
+#If necessary, read in data, then umap. 
+
+#macro_data <- readRDS("./03-analysis/macro_data.rds")
+
+macro_data <- FindNeighbors(macro_data, reduction = "harmony", dims = 1:50)
+macro_data <- FindClusters(macro_data, resolution = c(0.2, 0.3, 0.4))
+macro_data <- RunUMAP(macro_data, reduction = "harmony", dims = 1:50)
+
+macro_data$condition <- factor(
+  macro_data$condition,
+  levels = c("Control", "MCT-Water", "MCT-Blumeria")
+)
+DimPlot(
+  macro_data,
+  reduction = "umap",
+  group.by = "condition",
+  split.by = "condition",
+  label = FALSE
+)
+
+DimPlot(
+  macro_data,
+  reduction = "umap",
+  # group.by = "RNA_snn_res.0.3",
+  split.by = "condition",
+  label = TRUE
+)
+
+```
+
+```{r}
+#Find markers
+
+# use RNA counts/normalized data for DE
+DefaultAssay(macro_data) <- "RNA"
+macro_data <- JoinLayers(macro_data, assay = "RNA")
+
+Idents(macro_data) <- "RNA_snn_res.0.3"
+
+macro_markers_cluster0  <- FindConservedMarkers(macro_data, ident.1 = 0,  grouping.var = "condition")
+
+macro_markers_cluster1 <- FindConservedMarkers(macro_data, ident.1 = 1, grouping.var = "condition")
+
+macro_markers_cluster2 <- FindConservedMarkers(macro_data, ident.1 = 2, grouping.var = "condition")
+
+macro_markers_cluster3 <- FindConservedMarkers(macro_data, ident.1 = 3, grouping.var = "condition")
+
+macro_markers_cluster4 <- FindConservedMarkers(macro_data, ident.1 = 4, grouping.var = "condition")
+
+macro_markers_cluster5 <- FindConservedMarkers(macro_data, ident.1 = 5, grouping.var = "condition")
+```
+
+
+```{r}
+#Relative quantification 
+
+# Store renamed Idents in metadata column
+macro_data$cell_type <- Idents(macro_data)
+
+# Set the desired order of cell types
+celltype_order <- c(
+  "0", 
+  "1", 
+  "2", 
+  "3", 
+  "4", 
+  "5", 
+  "6", 
+  "7"
+)
+
+# Define colors matching celltype_order 
+cell_cols <- c(
+  "0" = "#BA1C30",
+  "1"    = "#5FA641", 
+  "2"      = "#702C8C",
+  "3"   = "#D55E00",
+  "4"    = "#0072B2", 
+  "5" = "#Ca1",
+  "6" = "#F5A",
+  "7" = "#202C8D"
+)
+
+# Make cell_type a factor with that order
+macro_data$cell_type <- factor(
+  macro_data$cell_type,
+  levels = celltype_order
+)
+
+plot_order <- rev(celltype_order)  # Reverse for ggplot/barplot
+# Set Idents and cell_type with plot order
+Idents(macro_data) <- factor(macro_data$cell_type, levels = plot_order)
+macro_data$cell_type <- factor(macro_data$cell_type, levels = plot_order)
+# Now cell_types and plots follow your desired order
+cell_types <- levels(Idents(macro_data))
+
+origin_x <- -15
+origin_y <- -15
+len      <- 5   # length of mini-axes in UMAP units
+
+mini_axes <- data.frame(
+  x    = c(origin_x, origin_x),
+  y    = c(origin_y, origin_y),
+  xend = c(origin_x + len, origin_x),
+  yend = c(origin_y,        origin_y + len)
+)
+# Use same palette in UMAP
+p_umap <- DimPlot(
+  macro_data,
+  reduction  = "umap",
+  split.by   = "condition",
+  # label      = TRUE,
+  label      = FALSE,
+  label.size = 8,
+  cols       = cell_cols          # <— key line
+) +
+  NoGrid() + 
+  # NoLegend() +
+  coord_cartesian(clip = "off") +
+  theme(
+    axis.line   = element_blank(),
+    axis.ticks  = element_blank(),
+    axis.text   = element_blank(),
+    axis.title  = element_blank(),
+    plot.margin = margin(t = 5, r = 5, b = 5, l = 30),
+    legend.text = element_text(size = 20)
+  ) +
+  geom_segment(
+    data = mini_axes,
+    aes(x = x, y = y, xend = xend, yend = yend),
+    inherit.aes = FALSE,
+    arrow = arrow(type = "closed", length = unit(3, "pt")),
+    linewidth = 0.4
+  ) +
+  annotate("text",
+           x = origin_x + len, y = origin_y,
+           label = "UMAP1", vjust = 1.5, size = 3) +
+  annotate("text",
+           x = origin_x - 0.25, y = origin_y + len,
+           label = "UMAP2", hjust = 0.5, angle = 90, size = 3)
+
+# counts per cell type per condition
+tab_counts <- table(
+  CellType  = Idents(macro_data),
+  Condition = macro_data$condition
+)
+
+# relative proportions within each condition (columns sum to 1)
+tab_prop <- prop.table(tab_counts, margin = 2)
+df_prop <- as.data.frame(tab_prop) %>%
+  dplyr::rename(Proportion = Freq)
+
+p_bar <- ggplot(df_prop,
+                aes(x = 1, y = Proportion, fill = CellType)) +
+  geom_col(position = "fill", color = "black", width = 1) +
+  coord_flip() +
+  facet_wrap(~ Condition, nrow = 1) +
+  scale_fill_manual(values = cell_cols, guide = "none") +
+  xlab(NULL) +   # now appears above the bars
+  ylab(NULL) +
+  theme_minimal() +
+  labs(title = "Relative Abundance (%)") +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    strip.background = element_blank(),
+    strip.text       = element_blank(),
+    panel.background = element_blank(),
+    plot.background  = element_blank(),
+    panel.grid       = element_blank(),
+    axis.text.x      = element_blank(),  # keep digits hidden
+    axis.ticks.x     = element_blank(),
+    axis.text.y      = element_blank(),   
+    axis.ticks.y     = element_blank()
+  )
+
+# plot combined graphs
+macro_p_combined <- p_umap / p_bar + plot_layout(heights = c(12, 1))
+
+print(macro_p_combined)
+```
+
+```{r}
+#Begin analysis of DE genes
+
+#Consolidated Pseudobulking and DESeq2 Function
+run_pseudobulk_deg_macro <- function(seu_obj, cell_type, min_counts = 10, alpha = 0.05,
+                               plot_title = NULL, save_results = FALSE) {
+  
+  # Set assay to RNA for raw counts
+  DefaultAssay(seu_obj) <- "RNA"
+  
+  # Subset to specified cell type
+  cells <- WhichCells(seu_obj, idents = cell_type)
+  if (length(cells) == 0) {
+    stop(paste("No cells found for cell type:", cell_type))
+  }
+  
+  seu_subset <- subset(seu_obj, cells = cells)
+  cat("Analyzing", length(cells), "cells for", cell_type, "\n") # look at, maybe remove
+  
+  # Pseudobulk Matrix by sample (orig.ident)
+  cts <- AggregateExpression(seu_subset, assays = "RNA", group.by = "orig.ident",
+                             slot = "counts", return.seurat = FALSE)
+  cts <- cts$RNA
+  
+  # Prepare Metadata
+  colData <- data.frame(samples = colnames(cts)) %>%
+    mutate(
+      condition = case_when(
+        str_detect(samples, "Blumeria") ~ "MCT-Blumeria",
+        str_detect(samples, "Water") ~ "MCT-Water",
+        str_detect(samples, "Control") ~ "Control"
+      )
+    ) %>%
+    column_to_rownames(var = "samples")
+  
+  # Create DESeq2 object
+  dds <- DESeqDataSetFromMatrix(
+    countData = cts,
+    colData = colData,
+    design = ~ condition)
+  
+  # Filter low-count genes
+  keep <- rowSums(counts(dds)) >= min_counts
+  dds <- dds[keep, ]
+  cat("Filtered to", nrow(dds), "genes (min total counts =", min_counts, ")\n")
+  
+  # Set reference level 
+  dds$condition <- relevel(dds$condition, ref = "Control")
+  
+  # Run DESeq2
+  dds <- DESeq(dds)
+  
+  # Extract contrasts
+  res_water_vs_ctrl <- results(dds, contrast = c("condition", "MCT-Water", "Control"),
+                               alpha = alpha)
+  res_blum_vs_ctrl <- results(dds, contrast = c("condition", "MCT-Blumeria", "Control"),
+                              alpha = alpha)
+  res_blum_vs_water <- results(dds, contrast = c("condition", "MCT-Blumeria", "MCT-Water"), 
+                               alpha = alpha)
+  res_water_vs_blum <- results(dds, contrast = c("condition", "MCT-Water", "MCT-Blumeria"),
+                               alpha = alpha)
+  
+  # Print summaries
+  cat("\n=== DESeq2 Results Summary for", cell_type, "===\n")
+  cat("Water vs Control:\n"); summary(res_water_vs_ctrl)
+  cat("\nBlumeria vs Control:\n"); summary(res_blum_vs_ctrl)
+  cat("\nBlumeria vs Water:\n"); summary(res_blum_vs_water)
+  cat("\nWater vs Blumeria:\n"); summary(res_water_vs_blum)
+  
+  # Normalize data for PCA
+  # rld <- vst(dds, blind = FALSE)
+  
+  # Generate plots
+  # title <- ifelse(is.null(plot_title), cell_type, plot_title)
+  
+  # p_pca <- plotPCA(rld, intgroup = "condition") +
+  # stat_ellipse(level = 0.95, alpha = 0.3, geom = "polygon") +
+  # ggtitle(paste("Pseudoulk PCA:", title))
+  
+  # p_ma_water <- plotMA(res_water_vs_ctrl) + ggtitle("MA: Water vs Control")
+  # p_ma_water_blum <- plotMA(res_water_vs_blum) + ggtitle("MA: Water vs Blumeria")
+  
+  # Display plots
+  # print(p_pca)
+  # print(p_ma_water)
+  # print(p_ma_water_blum)
+  
+  # Save results if requested
+  if (save_results) {
+    results_list <- list(
+      water_vs_ctrl = res_water_vs_ctrl,
+      blum_vs_ctrl = res_blum_vs_ctrl,
+      blum_vs_water = res_blum_vs_water,
+      water_vs_blum = res_water_vs_blum
+      # dds = dds
+      # rld = rld
+    )
+    
+    filename <- paste0("macro_DEG_", gsub("[^A-Za-z0-9]", "_", cell_type), ".rds")
+    saveRDS(results_list, file = paste0("./03-analysis/", filename))
+    cat("Results saved to:", filename, "\n")
+    
+  }
+  
+  # Return results
+  return(
+    results <- list(
+      water_vs_ctrl = res_water_vs_ctrl,
+      blum_vs_ctrl = res_blum_vs_ctrl,
+      blum_vs_water = res_blum_vs_water,
+      water_vs_blum = res_water_vs_blum,
+      dds = dds
+      # rld = rld
+    )
+  )
+}
+```
+
+```{r}
+# Run DSEq2 on all cell types for macrophages
+
+macro_deg_results <- list()
+cell_types <- levels(macro_data)  
+for (cell_type in cell_types) {
+  cat("\\\\n=== Processing", cell_type, "===\\\\n")
+  macro_deg_results[[cell_type]] <- run_pseudobulk_deg_macro(macro_data, cell_type, 
+                                                 alpha = 0.1, save_results = FALSE)
+}
+```
+
+```{r}
+# Extract significant DE gene counts
+macro_sig_counts <- data.frame(
+  cell_type = character(),
+  contrast = character(),
+  upregulated = numeric(),
+  downregulated = numeric()
+)
+
+for (cell_type in cell_types) {
+  res <- macro_deg_results[[cell_type]]
+  
+  # Water vs Control
+  sig_up_water <- sum(res$water_vs_ctrl$padj < 0.2 & res$water_vs_ctrl$log2FoldChange > 0, na.rm = TRUE)
+  sig_down_water <- sum(res$water_vs_ctrl$padj < 0.2 & res$water_vs_ctrl$log2FoldChange < 0, na.rm = TRUE)
+  
+  # Water vs Blumeria
+  sig_up_water_blum <- sum(res$water_vs_blum$padj < 0.2 & res$water_vs_blum$log2FoldChange > 0, na.rm = TRUE)
+  sig_down_water_blum <- sum(res$water_vs_blum$padj < 0.2 & res$water_vs_blum$log2FoldChange < 0, na.rm = TRUE)
+  
+  macro_sig_counts <- rbind(macro_sig_counts, data.frame(
+    cell_type = cell_type,
+    contrast = "Water vs Ctrl",
+    upregulated = sig_up_water,
+    downregulated = sig_down_water
+  ))
+  
+  macro_sig_counts <- rbind(macro_sig_counts, data.frame(
+    cell_type = cell_type,
+    contrast = "Water vs Blumeria",
+    upregulated = sig_up_water_blum,
+    downregulated = sig_down_water_blum
+  ))
+}
+
+# Create bar plot
+macro_sig_counts_long <- macro_sig_counts %>%
+  pivot_longer(cols = c(upregulated, downregulated), 
+               names_to = "direction", values_to = "count")
+
+# Use your cell type order and colors
+macro_sig_counts_long$cell_type <- factor(macro_sig_counts_long$cell_type, levels = rev(cell_types))
+macro_sig_counts_long$direction <- factor(macro_sig_counts_long$direction, 
+                                    levels = c("upregulated", "downregulated"))
+macro_sig_counts_long$contrast <- factor(macro_sig_counts_long$contrast, 
+                                   levels = c("Water vs Ctrl", 
+                                              "Water vs Blumeria"
+                                   ))
+
+macro_p_sig <- ggplot(macro_sig_counts_long, aes(x = cell_type, y = count, fill = direction)) +
+  geom_col(position = "dodge") +
+  facet_wrap(~ contrast, scales = "free_y", ncol = 3) +
+  scale_fill_manual(values = c("upregulated" = "#E31A1C", "downregulated" = "#1F78B4")) +
+  labs(title = "Significant DE Genes (padj < 0.2) Across Cell Types",
+       x = "Cell Type", y = "Number of DE Genes",
+       fill = "Direction") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "bottom")
+
+print(macro_p_sig)
+```
+
+```{r}
+#Get DE genes for all macrophage subclusters
+run_pseudobulk_deg_macro(macro_data, "0", alpha = 0.2, save_results = TRUE)
+run_pseudobulk_deg_macro(macro_data, "1", alpha = 0.2, save_results = TRUE)
+run_pseudobulk_deg_macro(macro_data, "2", alpha = 0.2, save_results = TRUE)
+run_pseudobulk_deg_macro(macro_data, "3", alpha = 0.2, save_results = TRUE)
+run_pseudobulk_deg_macro(macro_data, "4", alpha = 0.2, save_results = TRUE)
+run_pseudobulk_deg_macro(macro_data, "5", alpha = 0.2, save_results = TRUE)
+```
+
+```{r}
+# ---- Macro cluster 0 ----
+macro_zero_results <- readRDS("./03-analysis/macro_DEG_0.rds")
+
+macro_zero_gsea_res <- analyze_celltype_gsea(macro_zero_results, "0")
+
+macro_zero_gsea_df <- as.data.frame(macro_zero_gsea_res$gsea)
+head(macro_zero_gsea_df)
+write.csv(
+  macro_zero_gsea_df,
+  file = "./macro_0_GSEA_GO.csv",
+  row.names = FALSE
+)
+```
+
+```{r}
+# ---- Macro cluster 1 ----
+macro_one_results <- readRDS("./03-analysis/macro_DEG_1.rds")
+
+macro_one_gsea_res <- analyze_celltype_gsea(macro_one_results, "1")
+
+macro_one_gsea_df <- as.data.frame(macro_one_gsea_res$gsea)
+head(macro_one_gsea_df)
+write.csv(
+  macro_one_gsea_df,
+  file = "./macro_1_GSEA_GO.csv",
+  row.names = FALSE
+)
+```
+
+```{r}
+# ---- Macro cluster 2 ----
+macro_two_results <- readRDS("./03-analysis/macro_DEG_2.rds")
+
+macro_two_gsea_res <- analyze_celltype_gsea(macro_two_results, "2")
+
+macro_two_gsea_df <- as.data.frame(macro_two_gsea_res$gsea)
+head(macro_two_gsea_df)
+write.csv(
+  macro_two_gsea_df,
+  file = "./macro_2_GSEA_GO.csv",
+  row.names = FALSE
+)
+```
+
+```{r}
+# ---- Macro cluster 3 ----
+macro_three_results <- readRDS("./03-analysis/macro_DEG_3.rds")
+
+macro_three_gsea_res <- analyze_celltype_gsea(macro_three_results, "3")
+
+macro_three_gsea_df <- as.data.frame(macro_three_gsea_res$gsea)
+head(macro_three_gsea_df)
+write.csv(
+  macro_three_gsea_df,
+  file = "./macro_3_GSEA_GO.csv",
+  row.names = FALSE
+)
+```
+
+```{r}
+# ---- Macro cluster 4 ----
+macro_four_results <- readRDS("./03-analysis/macro_DEG_4.rds")
+
+macro_four_gsea_res <- analyze_celltype_gsea(macro_four_results, "4")
+
+macro_four_gsea_df <- as.data.frame(macro_four_gsea_res$gsea)
+head(macro_four_gsea_df)
+write.csv(
+  macro_four_gsea_df,
+  file = "./macro_4_GSEA_GO.csv",
+  row.names = FALSE
+)
+```
+
+```{r}
+# ---- Macro cluster 5 ----
+macro_five_results <- readRDS("./03-analysis/macro_DEG_5.rds")
+
+macro_five_gsea_res <- analyze_celltype_gsea(macro_five_results, "5")
+
+macro_five_gsea_df <- as.data.frame(macro_five_gsea_res$gsea)
+head(macro_five_gsea_df)
+write.csv(
+  macro_five_gsea_df,
+  file = "./macro_5_GSEA_GO.csv",
+  row.names = FALSE
+)
+```
+
+```{r}
+#Fibroblast section
+```
+
+```{r}
+#If necessary, read in the data, then umap.  
+
+fibro_data <- readRDS("./fibro_data.rds")
+
+fibro_data <- FindNeighbors(fibro_data, reduction = "harmony", dims = 1:20)
+fibro_data <- FindClusters(fibro_data, resolution = c(0.2, 0.3, 0.4))
+fibro_data <- RunUMAP(fibro_data, reduction = "harmony", dims = 1:20)
+
+fibro_data$condition <- factor(
+  fibro_data$condition,
+  levels = c("Control", "MCT-Water", "MCT-Blumeria")
+)
+DimPlot(
+  fibro_data,
+  reduction = "umap",
+  group.by = "condition",
+  split.by = "condition",
+  label = FALSE
+)
+
+DimPlot(
+  fibro_data,
+  reduction = "umap",
+  group.by = "RNA_snn_res.0.3",
+  split.by = "condition",
+  label = TRUE
+)
+```
+
+```{r}
+#Find markers
+
+# use RNA counts/normalized data for DE
+DefaultAssay(fibro_data) <- "RNA"
+fibro_data <- JoinLayers(fibro_data, assay = "RNA")
+
+Idents(fibro_data) <- "RNA_snn_res.0.3"
+
+fibro_markers_cluster0 <- FindConservedMarkers(fibro_data, ident.1 = 0,  grouping.var = "condition")
+
+fibro_markers_cluster1 <- FindConservedMarkers(fibro_data, ident.1 = 1,  grouping.var = "condition")
+
+fibro_markers_cluster2 <- FindConservedMarkers(fibro_data, ident.1 = 2,  grouping.var = "condition")
+
+fibro_markers_cluster3 <- FindConservedMarkers(fibro_data, ident.1 = 3,  grouping.var = "condition")
+
+fibro_markers_cluster4 <- FindConservedMarkers(fibro_data, ident.1 = 4,  grouping.var = "condition")
+
+fibro_markers_cluster5 <- FindConservedMarkers(fibro_data, ident.1 = 5,  grouping.var = "condition")
+```
+
+```{r}
+#Relative quantification
+
+# Store renamed Idents in metadata column
+fibro_data$cell_type <- Idents(fibro_data)
+
+# Set the desired order of cell types
+celltype_order <- c(
+  "0", 
+  "1", 
+  "2", 
+  "3", 
+  "4", 
+  "5", 
+  "6"
+)
+
+# Define colors matching celltype_order 
+cell_cols <- c(
+  "0" = "#BA1C30",
+  "1"    = "#5FA641", 
+  "2"      = "#702C8C",
+  "3"   = "#D55E00",
+  "4"    = "#0072B2", 
+  "5" = "#F0E442",
+  "6"       = "#CC79A1"
+)
+
+# Make cell_type a factor with that order
+fibro_data$cell_type <- factor(
+  fibro_data$cell_type,
+  levels = celltype_order
+)
+
+plot_order <- rev(celltype_order)  # Reverse for ggplot/barplot
+# Set Idents and cell_type with plot order
+Idents(fibro_data) <- factor(fibro_data$cell_type, levels = plot_order)
+fibro_data$cell_type <- factor(fibro_data$cell_type, levels = plot_order)
+# Now cell_types and plots follow your desired order
+cell_types <- levels(Idents(fibro_data))
+
+origin_x <- -15
+origin_y <- -15
+len      <- 5   # length of mini-axes in UMAP units
+
+mini_axes <- data.frame(
+  x    = c(origin_x, origin_x),
+  y    = c(origin_y, origin_y),
+  xend = c(origin_x + len, origin_x),
+  yend = c(origin_y,        origin_y + len)
+)
+# Use same palette in UMAP
+p_umap <- DimPlot(
+  fibro_data,
+  reduction  = "umap",
+  split.by   = "condition",
+  # label      = TRUE,
+  label      = FALSE,
+  label.size = 8,
+  cols       = cell_cols          # <— key line
+) +
+  NoGrid() + 
+  # NoLegend() +
+  coord_cartesian(clip = "off") +
+  theme(
+    axis.line   = element_blank(),
+    axis.ticks  = element_blank(),
+    axis.text   = element_blank(),
+    axis.title  = element_blank(),
+    plot.margin = margin(t = 5, r = 5, b = 5, l = 30),
+    legend.text = element_text(size = 20)
+  ) +
+  geom_segment(
+    data = mini_axes,
+    aes(x = x, y = y, xend = xend, yend = yend),
+    inherit.aes = FALSE,
+    arrow = arrow(type = "closed", length = unit(3, "pt")),
+    linewidth = 0.4
+  ) +
+  annotate("text",
+           x = origin_x + len, y = origin_y,
+           label = "UMAP1", vjust = 1.5, size = 3) +
+  annotate("text",
+           x = origin_x - 0.25, y = origin_y + len,
+           label = "UMAP2", hjust = 0.5, angle = 90, size = 3)
+
+# counts per cell type per condition
+tab_counts <- table(
+  CellType  = Idents(macro_data),
+  Condition = macro_data$condition
+)
+
+# relative proportions within each condition (columns sum to 1)
+tab_prop <- prop.table(tab_counts, margin = 2)
+df_prop <- as.data.frame(tab_prop) %>%
+  dplyr::rename(Proportion = Freq)
+
+p_bar <- ggplot(df_prop,
+                aes(x = 1, y = Proportion, fill = CellType)) +
+  geom_col(position = "fill", color = "black", width = 1) +
+  coord_flip() +
+  facet_wrap(~ Condition, nrow = 1) +
+  scale_fill_manual(values = cell_cols, guide = "none") +
+  xlab(NULL) +   # now appears above the bars
+  ylab(NULL) +
+  theme_minimal() +
+  labs(title = "Relative Abundance (%)") +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    strip.background = element_blank(),
+    strip.text       = element_blank(),
+    panel.background = element_blank(),
+    plot.background  = element_blank(),
+    panel.grid       = element_blank(),
+    axis.text.x      = element_blank(),  # keep digits hidden
+    axis.ticks.x     = element_blank(),
+    axis.text.y      = element_blank(),   
+    axis.ticks.y     = element_blank()
+  )
+
+# plot combined graphs
+fibro_p_combined <- p_umap / p_bar + plot_layout(heights = c(12, 1))
+
+print(fibro_p_combined)
+```
+
+```{r}
+#Begin analysis of DE genes
+
+#Consolidated Pseudobulking and DESeq2 Function
+run_pseudobulk_deg_fibro <- function(seu_obj, cell_type, min_counts = 10, alpha = 0.05,
+                               plot_title = NULL, save_results = FALSE) {
+  
+  # Set assay to RNA for raw counts
+  DefaultAssay(seu_obj) <- "RNA"
+  
+  # Subset to specified cell type
+  cells <- WhichCells(seu_obj, idents = cell_type)
+  if (length(cells) == 0) {
+    stop(paste("No cells found for cell type:", cell_type))
+  }
+  
+  seu_subset <- subset(seu_obj, cells = cells)
+  cat("Analyzing", length(cells), "cells for", cell_type, "\n") # look at, maybe remove
+  
+  # Pseudobulk Matrix by sample (orig.ident)
+  cts <- AggregateExpression(seu_subset, assays = "RNA", group.by = "orig.ident",
+                             slot = "counts", return.seurat = FALSE)
+  cts <- cts$RNA
+  
+  # Prepare Metadata
+  colData <- data.frame(samples = colnames(cts)) %>%
+    mutate(
+      condition = case_when(
+        str_detect(samples, "Blumeria") ~ "MCT-Blumeria",
+        str_detect(samples, "Water") ~ "MCT-Water",
+        str_detect(samples, "Control") ~ "Control"
+      )
+    ) %>%
+    column_to_rownames(var = "samples")
+  
+  # Create DESeq2 object
+  dds <- DESeqDataSetFromMatrix(
+    countData = cts,
+    colData = colData,
+    design = ~ condition)
+  
+  # Filter low-count genes
+  keep <- rowSums(counts(dds)) >= min_counts
+  dds <- dds[keep, ]
+  cat("Filtered to", nrow(dds), "genes (min total counts =", min_counts, ")\n")
+  
+  # Set reference level 
+  dds$condition <- relevel(dds$condition, ref = "Control")
+  
+  # Run DESeq2
+  dds <- DESeq(dds)
+  
+  # Extract contrasts
+  res_water_vs_ctrl <- results(dds, contrast = c("condition", "MCT-Water", "Control"),
+                               alpha = alpha)
+  res_blum_vs_ctrl <- results(dds, contrast = c("condition", "MCT-Blumeria", "Control"),
+                              alpha = alpha)
+  res_blum_vs_water <- results(dds, contrast = c("condition", "MCT-Blumeria", "MCT-Water"), 
+                               alpha = alpha)
+  res_water_vs_blum <- results(dds, contrast = c("condition", "MCT-Water", "MCT-Blumeria"),
+                               alpha = alpha)
+  
+  # Print summaries
+  cat("\n=== DESeq2 Results Summary for", cell_type, "===\n")
+  cat("Water vs Control:\n"); summary(res_water_vs_ctrl)
+  cat("\nBlumeria vs Control:\n"); summary(res_blum_vs_ctrl)
+  cat("\nBlumeria vs Water:\n"); summary(res_blum_vs_water)
+  cat("\nWater vs Blumeria:\n"); summary(res_water_vs_blum)
+  
+  # Normalize data for PCA
+  # rld <- vst(dds, blind = FALSE)
+  
+  # Generate plots
+  # title <- ifelse(is.null(plot_title), cell_type, plot_title)
+  
+  # p_pca <- plotPCA(rld, intgroup = "condition") +
+  # stat_ellipse(level = 0.95, alpha = 0.3, geom = "polygon") +
+  # ggtitle(paste("Pseudoulk PCA:", title))
+  
+  # p_ma_water <- plotMA(res_water_vs_ctrl) + ggtitle("MA: Water vs Control")
+  # p_ma_water_blum <- plotMA(res_water_vs_blum) + ggtitle("MA: Water vs Blumeria")
+  
+  # Display plots
+  # print(p_pca)
+  # print(p_ma_water)
+  # print(p_ma_water_blum)
+  
+  # Save results if requested
+  if (save_results) {
+    results_list <- list(
+      water_vs_ctrl = res_water_vs_ctrl,
+      blum_vs_ctrl = res_blum_vs_ctrl,
+      blum_vs_water = res_blum_vs_water,
+      water_vs_blum = res_water_vs_blum
+      # dds = dds
+      # rld = rld
+    )
+    
+    filename <- paste0("fibro_DEG_", gsub("[^A-Za-z0-9]", "_", cell_type), ".rds")
+    saveRDS(results_list, file = paste0("./03-analysis/", filename))
+    cat("Results saved to:", filename, "\n")
+    
+  }
+  
+  # Return results
+  return(
+    results <- list(
+      water_vs_ctrl = res_water_vs_ctrl,
+      blum_vs_ctrl = res_blum_vs_ctrl,
+      blum_vs_water = res_blum_vs_water,
+      water_vs_blum = res_water_vs_blum,
+      dds = dds
+      # rld = rld
+    )
+  )
+}
+```
+
+```{r}
+# Run DSEq2 on all cell types for fibroblasts
+
+fibro_deg_results <- list()
+cell_types <- levels(fibro_data)  
+for (cell_type in cell_types) {
+  cat("\\\\n=== Processing", cell_type, "===\\\\n")
+  fibro_deg_results[[cell_type]] <- run_pseudobulk_deg_fibro(fibro_data, cell_type, alpha = 0.1, save_results = FALSE)
+}
+```
+
+```{r}
+# Extract significant DE gene counts
+fibro_sig_counts <- data.frame(
+  cell_type = character(),
+  contrast = character(),
+  upregulated = numeric(),
+  downregulated = numeric()
+)
+
+for (cell_type in cell_types) {
+  res <- fibro_deg_results[[cell_type]]
+  
+  # Water vs Control
+  sig_up_water <- sum(res$water_vs_ctrl$padj < 0.2 & res$water_vs_ctrl$log2FoldChange > 0, na.rm = TRUE)
+  sig_down_water <- sum(res$water_vs_ctrl$padj < 0.2 & res$water_vs_ctrl$log2FoldChange < 0, na.rm = TRUE)
+  
+  # Water vs Blumeria
+  sig_up_water_blum <- sum(res$water_vs_blum$padj < 0.2 & res$water_vs_blum$log2FoldChange > 0, na.rm = TRUE)
+  sig_down_water_blum <- sum(res$water_vs_blum$padj < 0.2 & res$water_vs_blum$log2FoldChange < 0, na.rm = TRUE)
+  
+  fibro_sig_counts <- rbind(fibro_sig_counts, data.frame(
+    cell_type = cell_type,
+    contrast = "Water vs Ctrl",
+    upregulated = sig_up_water,
+    downregulated = sig_down_water
+  ))
+  
+  fibro_sig_counts <- rbind(fibro_sig_counts, data.frame(
+    cell_type = cell_type,
+    contrast = "Water vs Blumeria",
+    upregulated = sig_up_water_blum,
+    downregulated = sig_down_water_blum
+  ))
+}
+
+# Create bar plot
+fibro_sig_counts_long <- fibro_sig_counts %>%
+  pivot_longer(cols = c(upregulated, downregulated), 
+               names_to = "direction", values_to = "count")
+
+# Use your cell type order and colors
+fibro_sig_counts_long$cell_type <- factor(fibro_sig_counts_long$cell_type, levels = rev(cell_types))
+fibro_sig_counts_long$direction <- factor(fibro_sig_counts_long$direction, 
+                                    levels = c("upregulated", "downregulated"))
+fibro_sig_counts_long$contrast <- factor(fibro_sig_counts_long$contrast, 
+                                   levels = c("Water vs Ctrl", 
+                                              "Water vs Blumeria"
+                                   ))
+
+fibro_p_sig <- ggplot(fibro_sig_counts_long, aes(x = cell_type, y = count, fill = direction)) +
+  geom_col(position = "dodge") +
+  facet_wrap(~ contrast, scales = "free_y", ncol = 3) +
+  scale_fill_manual(values = c("upregulated" = "#E31A1C", "downregulated" = "#1F78B4")) +
+  labs(title = "Significant DE Genes (padj < 0.2) Across Cell Types",
+       x = "Cell Type", y = "Number of DE Genes",
+       fill = "Direction") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "bottom")
+
+print(fibro_p_sig)
+```
+
+```{r}
+#Get DE genes for all fibroblast subclusters
+run_pseudobulk_deg_fibro(fibro_data, "0", alpha = 0.2, save_results = TRUE)
+run_pseudobulk_deg_fibro(fibro_data, "1", alpha = 0.2, save_results = TRUE)
+run_pseudobulk_deg_fibro(fibro_data, "2", alpha = 0.2, save_results = TRUE)
+run_pseudobulk_deg_fibro(fibro_data, "3", alpha = 0.2, save_results = TRUE)
+run_pseudobulk_deg_fibro(fibro_data, "4", alpha = 0.2, save_results = TRUE)
+run_pseudobulk_deg_fibro(fibro_data, "5", alpha = 0.2, save_results = TRUE)
+```
+
+```{r}
+# ---- Fibro cluster 0 ----
+fibro_zero_results <- readRDS("./03-analysis/fibro_DEG_0.rds")
+
+fibro_zero_gsea_res <- analyze_celltype_gsea(fibro_zero_results, "0")
+
+fibro_zero_gsea_df <- as.data.frame(fibro_zero_gsea_res$gsea)
+head(fibro_zero_gsea_df)
+write.csv(
+  fibro_zero_gsea_df,
+  file = "./fibro_0_GSEA_GO.csv",
+  row.names = FALSE
+)
+```
+
+```{r}
+# ---- Fibro cluster 1 ----
+fibro_one_results <- readRDS("./03-analysis/fibro_DEG_1.rds")
+
+fibro_one_gsea_res <- analyze_celltype_gsea(fibro_one_results, "1")
+
+fibro_one_gsea_df <- as.data.frame(fibro_one_gsea_res$gsea)
+head(fibro_one_gsea_df)
+write.csv(
+  fibro_one_gsea_df,
+  file = "./fibro_1_GSEA_GO.csv",
+  row.names = FALSE
+)
+```
+
+```{r}
+# ---- Fibro cluster 2 ----
+fibro_two_results <- readRDS("./03-analysis/fibro_DEG_2.rds")
+
+fibro_two_gsea_res <- analyze_celltype_gsea(fibro_two_results, "2")
+
+fibro_two_gsea_df <- as.data.frame(fibro_two_gsea_res$gsea)
+head(fibro_two_gsea_df)
+write.csv(
+  fibro_two_gsea_df,
+  file = "./fibro_2_GSEA_GO.csv",
+  row.names = FALSE
+)
+```
+
+```{r}
+# ---- Fibro cluster 3 ----
+fibro_three_results <- readRDS("./03-analysis/fibro_DEG_3.rds")
+
+fibro_three_gsea_res <- analyze_celltype_gsea(fibro_three_results, "3")
+
+fibro_three_gsea_df <- as.data.frame(fibro_three_gsea_res$gsea)
+head(fibro_three_gsea_df)
+write.csv(
+  fibro_three_gsea_df,
+  file = "./fibro_3_GSEA_GO.csv",
+  row.names = FALSE
+)
+```
+
+```{r}
+# ---- Fibro cluster 4 ----
+fibro_four_results <- readRDS("./03-analysis/fibro_DEG_4.rds")
+
+fibro_four_gsea_res <- analyze_celltype_gsea(fibro_four_results, "4")
+
+fibro_four_gsea_df <- as.data.frame(fibro_four_gsea_res$gsea)
+head(fibro_four_gsea_df)
+write.csv(
+  fibro_four_gsea_df,
+  file = "./fibro_4_GSEA_GO.csv",
+  row.names = FALSE
+)
+```
+
+```{r}
+# ---- Fibro cluster 5 ----
+fibro_five_results <- readRDS("./03-analysis/fibro_DEG_5.rds")
+
+fibro_five_gsea_res <- analyze_celltype_gsea(fibro_five_results, "5")
+
+fibro_five_gsea_df <- as.data.frame(fibro_five_gsea_res$gsea)
+head(fibro_five_gsea_df)
+write.csv(
+  fibro_five_gsea_df,
+  file = "./fibro_5_GSEA_GO.csv",
+  row.names = FALSE
+)
+```
+
+
+
+
+
+
+
+
+
+
+
+
