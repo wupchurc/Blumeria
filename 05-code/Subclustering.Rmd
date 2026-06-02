@@ -27,7 +27,7 @@ library(ggtangle)
 #each cell type. 
 
 #Load the integrated Seurat file
-seu_integrated <- readRDS("./03-analysis/seu_integrated_strict.rds")
+seu_integrated <- readRDS("./03-analysis_scratch/seu_integrated_strict.rds")
 
 #Find conserved markers
 DefaultAssay(seu_integrated) <- "RNA"
@@ -100,7 +100,7 @@ saveRDS(cm_data, "./03-analysis/cm_data.rds")
 #Extract macrophages
 macro_data  <- subset(seu_integrated, idents = c("Macrophages"))
 #Save
-saveRDS(macro_data, "./03-analysis/macro_data.rds")
+saveRDS(macro_data, "./03-analysis_scratch/macro_data.rds")
 
 #Extract fibroblasts 
 fibro_data  <- subset(seu_integrated, idents = c("Fibroblasts"))
@@ -641,28 +641,21 @@ write.csv(
 ```{r}
 #If necessary, read in data, then umap. 
 
-#macro_data <- readRDS("./03-analysis/macro_data.rds")
+macro_data <- readRDS("./03-analysis_scratch/macro_data.rds")
 
 macro_data <- FindNeighbors(macro_data, reduction = "harmony", dims = 1:50)
-macro_data <- FindClusters(macro_data, resolution = c(0.2, 0.3, 0.4))
+macro_data <- FindClusters(macro_data, resolution = c(0.1,0.2, 0.3, 0.4))
 macro_data <- RunUMAP(macro_data, reduction = "harmony", dims = 1:50)
 
 macro_data$condition <- factor(
   macro_data$condition,
   levels = c("Control", "MCT-Water", "MCT-Blumeria")
 )
-DimPlot(
-  macro_data,
-  reduction = "umap",
-  group.by = "condition",
-  split.by = "condition",
-  label = FALSE
-)
 
 DimPlot(
   macro_data,
   reduction = "umap",
-  # group.by = "RNA_snn_res.0.3",
+  group.by = "RNA_snn_res.0.1",
   split.by = "condition",
   label = TRUE
 )
@@ -670,8 +663,68 @@ DimPlot(
 ```
 
 ```{r}
+Idents(macro_data) <- "RNA_snn_res.0.1" # set active resolution
+
+table(Idents(macro_data), macro_data$condition)
+```
+```{r}
+# Define clusters to REMOVE
+bad_clusters <- c(3)
+
+# Get all cells from bad clusters
+bad_cells <- unlist(lapply(bad_clusters, function(x) WhichCells(macro_data, idents = x)))
+
+# Remove them ALL at once
+macro_data <- macro_data[, !colnames(macro_data) %in% bad_cells]
+
 table(Idents(macro_data))
 ```
+
+```{r}
+macro_markers_cluster0  <- FindConservedMarkers(macro_data, ident.1 = 0,  grouping.var = "condition")
+macro_markers_cluster1 <- FindConservedMarkers(macro_data, ident.1 = 1, grouping.var = "condition")
+macro_markers_cluster2  <- FindConservedMarkers(macro_data, ident.1 = 2,  grouping.var = "condition")
+# macro_markers_cluster3 <- FindConservedMarkers(macro_data, ident.1 = 3, grouping.var = "condition")
+# macro_markers_cluster4 <- FindConservedMarkers(macro_data, ident.1 = 4, grouping.var = "condition")
+# macro_markers_cluster5 <- FindConservedMarkers(macro_data, ident.1 = 5, grouping.var = "condition")
+# macro_markers_cluster6 <- FindConservedMarkers(macro_data, ident.1 = 6, grouping.var = "condition")
+# macro_markers_cluster7 <- FindConservedMarkers(macro_data, ident.1 = 7, grouping.var = "condition")
+```
+
+```{r}
+# Define your markers of interest (using rat/mouse nomenclature capitalize styles appropriately)
+resident_markers <- c("Timd4", "Lyve1", "Mertk", "Cd163")
+recruited_markers <- c("Ccr2", "S100a8", "S100a9", "Cx3cr1")
+alt_recruited_markers <- c("Ccr2", "Plac8", "Chil3", "Il1b", "Fn1", "Thbs1") # Alternative recruited markers better suited for single-nuc data
+
+# Visualize with DotPlot 
+DotPlot(macro_data, features = c(resident_markers, recruited_markers)) + 
+  RotatedAxis()
+
+# Visualize with FeaturePlot to see spatial UMAP distribution
+FeaturePlot(macro_data, features = c("Lyve1", "Fn1"), split.by = "condition")
+
+# using the alternative markers for recruited 
+DotPlot(macro_data, features = c(resident_markers,alt_recruited_markers)) + RotatedAxis()
+
+```
+
+```{r}
+# Rename Clusters - needs to be verified that this is correct
+macro_data <- RenameIdents(macro_data, '0' = 'Recruited?') 
+macro_data <- RenameIdents(macro_data, '1' = 'Resident?')
+macro_data <- RenameIdents(macro_data, '2' = 'Transitional?')
+```
+```{r}
+# can use this to find percent abundance of annotated subcluster
+table(Idents(macro_data), macro_data$condition)
+```
+
+
+
+
+
+
 
 ```{r}
 # Define clusters to REMOVE
