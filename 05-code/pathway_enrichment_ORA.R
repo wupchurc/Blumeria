@@ -7,6 +7,7 @@ library(ggplot2)
 library(patchwork)
 
 cm_results <- readRDS("03-analysis_scratch/DEG_Cardiomyocytes.rds")
+mac_results <- readRDS("03-analysis_scratch/DEG_Macrophages.rds")
 
 #---- Function to process one DESeqResults → up/down ENTREZ lists ----
 get_sig_genes <- function(res, lfc_threshold = 0.5, padj_threshold = 0.05, 
@@ -17,15 +18,20 @@ get_sig_genes <- function(res, lfc_threshold = 0.5, padj_threshold = 0.05,
   id_map <- bitr(df$gene, fromType="SYMBOL", toType="ENTREZID", OrgDb=org.Rn.eg.db)
   df <- merge(df, id_map, by.x="gene", by.y="SYMBOL")
   
-  up   <- df$ENTREZID[df$padj < padj_threshold & df$log2FoldChange >  lfc_threshold]
-  down <- df$ENTREZID[df$padj < padj_threshold & df$log2FoldChange < -lfc_threshold]
+  # up   <- df$ENTREZID[df$padj < padj_threshold & df$log2FoldChange >  lfc_threshold]
+  # down <- df$ENTREZID[df$padj < padj_threshold & df$log2FoldChange < -lfc_threshold]
+  # CHANGED: Pulling from df$gene instead of df$ENTREZID
+  up   <- df$gene[df$padj < padj_threshold & df$log2FoldChange >  lfc_threshold]
+  down <- df$gene[df$padj < padj_threshold & df$log2FoldChange < -lfc_threshold]
   
   # Write files if requested
   if (write_files && !is.null(comp_name) && !is.null(cell_name)) {
     
     up_genes <- up[!is.na(up)]
     down_genes <- down[!is.na(down)]
-    background <- as.character(df$ENTREZID)
+    # background <- as.character(df$ENTREZID)
+    # CHANGED: Set background to gene symbols so it matches the up/down inputs
+    background <- as.character(df$gene)
     
     writeLines(up_genes, sprintf("03-analysis_scratch/%s_%s_up_genes.txt", cell_name, comp_name))
     writeLines(down_genes, sprintf("03-analysis_scratch/%s_%s_down_genes.txt", cell_name, comp_name))
@@ -33,7 +39,10 @@ get_sig_genes <- function(res, lfc_threshold = 0.5, padj_threshold = 0.05,
   }
   
   
-  list(up = up, down = down, all = df$ENTREZID)
+  # list(up = up, down = down, all = df$ENTREZID)
+  # Returning gene symbols. Change 'df$gene' back to 'df$ENTREZID' if your downstream 
+  # R scripts expect the list output to be numbers!
+  list(up = up, down = down, all = df$gene)
 }
 # ---- Print up/down regulated DEGs and background to txt file (can be used w/ ShinyGO) ----
 
@@ -41,6 +50,8 @@ get_sig_genes(res = cm_results$water_vs_ctrl, lfc_threshold = 0.5, padj_threshol
               comp_name = "water_vs_ctrl", cell_name = "cm", write_files = TRUE)
 get_sig_genes(res = cm_results$water_vs_blum, lfc_threshold = 0.5, padj_threshold = 0.05, 
               comp_name = "water_vs_blum", cell_name = "cm", write_files = TRUE)
+get_sig_genes(res = cm_results$blum_vs_ctrl, lfc_threshold = 0.5, padj_threshold = 0.05, 
+              comp_name = "blum_vs_ctrl", cell_name = "cm", write_files = TRUE)
 
 # ---- Refactored Code for ORA ----
 

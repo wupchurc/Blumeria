@@ -122,79 +122,6 @@ run_pseudobulk_deg <- function(seu_obj, cell_type, min_counts = 10, alpha = 0.05
   )
 }
 
-# ---- Bar Plots of up and down regulated gene counts ----
-# Run DSEq2 on all cell types
-deg_results <- list()
-cell_types <- levels(seu_obj)  
-for (cell_type in cell_types) {
-  cat("\\\\n=== Processing", cell_type, "===\\\\n")
-  deg_results[[cell_type]] <- run_pseudobulk_deg(seu_obj, cell_type, 
-                                                 alpha = 0.1, save_results = FALSE)
-}
-
-# Extract significant DE gene counts
-sig_counts <- data.frame(
-  cell_type = character(),
-  contrast = character(),
-  upregulated = numeric(),
-  downregulated = numeric()
-)
-
-for (cell_type in cell_types) {
-  res <- deg_results[[cell_type]]$results
-  
-  # Water vs Control
-  sig_up_water <- sum(res$water_vs_ctrl$padj < 0.2 & res$water_vs_ctrl$log2FoldChange > 0, na.rm = TRUE)
-  sig_down_water <- sum(res$water_vs_ctrl$padj < 0.2 & res$water_vs_ctrl$log2FoldChange < 0, na.rm = TRUE)
-  
-  # Water vs Blumeria
-  sig_up_water_blum <- sum(res$water_vs_blum$padj < 0.2 & res$water_vs_blum$log2FoldChange > 0, na.rm = TRUE)
-  sig_down_water_blum <- sum(res$water_vs_blum$padj < 0.2 & res$water_vs_blum$log2FoldChange < 0, na.rm = TRUE)
-  
-  sig_counts <- rbind(sig_counts, data.frame(
-    cell_type = cell_type,
-    contrast = "Water vs Ctrl",
-    upregulated = sig_up_water,
-    downregulated = sig_down_water
-  ))
-  
-  sig_counts <- rbind(sig_counts, data.frame(
-    cell_type = cell_type,
-    contrast = "Water vs Blumeria",
-    upregulated = sig_up_water_blum,
-    downregulated = sig_down_water_blum
-  ))
-}
-
-# Create bar plot
-sig_counts_long <- sig_counts %>%
-  pivot_longer(cols = c(upregulated, downregulated), 
-               names_to = "direction", values_to = "count")
-
-# Use your cell type order and colors
-sig_counts_long$cell_type <- factor(sig_counts_long$cell_type, levels = rev(cell_types))
-sig_counts_long$direction <- factor(sig_counts_long$direction, 
-                                    levels = c("upregulated", "downregulated"))
-sig_counts_long$contrast <- factor(sig_counts_long$contrast, 
-                                   levels = c("Water vs Ctrl", 
-                                              "Water vs Blumeria"
-                                   ))
-
-p_sig <- ggplot(sig_counts_long, aes(x = cell_type, y = count, fill = direction)) +
-  geom_col(position = "dodge") +
-  facet_wrap(~ contrast, scales = "free_y", ncol = 3) +
-  scale_fill_manual(values = c("upregulated" = "#E31A1C", "downregulated" = "#1F78B4")) +
-  labs(title = "Significant DE Genes (padj < 0.2) Across Cell Types",
-       x = "Cell Type", y = "Number of DE Genes",
-       fill = "Direction") +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1),
-        legend.position = "bottom")
-
-print(p_sig)
-
-ggsave("output/DE_Genes_Bar_pval_1.png",plot = p_sig, width = 12, height = 6, dpi = 300)
-
 # ---- MA Plots of up and down regulated gene counts ----
 
 # Run DSEq2 on all cell types
@@ -219,12 +146,14 @@ create_ma_plot <- function(deg_results, cell_types, contrast_name,
     cell_type <- cell_types[i]
     
     # Extract the appropriate contrast
-    if (contrast_name == "Water vs Ctrl") {
+    if (contrast_name == "MCT-Water vs Control") {
       res <- deg_results[[cell_type]]$water_vs_ctrl
-    } else if (contrast_name == "Water vs Blumeria") {
+    } else if (contrast_name == "MCT-Water vs MCT-Blumeria") {
       res <- deg_results[[cell_type]]$water_vs_blum
-    } 
-    
+    } else if (contrast_name == "MCT-Blumeria vs Control") {
+      res <- deg_results[[cell_type]]$blum_vs_ctrl
+    }
+      
     # Convert to data frame
     df <- as.data.frame(res) %>%
       mutate(
@@ -284,45 +213,91 @@ create_ma_plot <- function(deg_results, cell_types, contrast_name,
   # UP counts (top, in red)
   for (i in seq_along(cell_types)) {
     p <- p + annotate("text", x = i, 
-                      # y = max(plot_data$log2FoldChange, na.rm = TRUE) * 1.05,
                       y = y_max*0.95,
-                      label = up_counts[i], color = "#E31A1C", size = 3.5, fontface = "bold")
+                      label = up_counts[i], color = "#E31A1C", size = 2, fontface = "bold")
   }
   
   # DOWN counts (bottom, in blue)
   for (i in seq_along(cell_types)) {
     p <- p + annotate("text", x = i, 
-                      # y = min(plot_data$log2FoldChange, na.rm = TRUE) * 1.05,
                       y = y_min*0.95,
-                      label = down_counts[i], color = "#1F78B4", size = 3.5, fontface = "bold")
+                      label = down_counts[i], color = "#1F78B4", size = 2, fontface = "bold")
   }
   
   p <- p + annotate("text", x = length(cell_types) + 0.8, y = y_max * 0.95,
-                    label = "UP", color = "#E31A1C", size = 4, fontface = "bold") +
+                    label = "UP", color = "#E31A1C", size = 2.5, fontface = "bold") +
     annotate("text", x = length(cell_types) + 0.8, y = y_min * 0.95,
-             label = "DOWN", color = "#1F78B4", size = 4, fontface = "bold")
+             label = "DOWN", color = "#1F78B4", size = 2.5, fontface = "bold")
   
   return(p)
 }
 
 # Create plots for each contrast
-p_water_ctrl <- create_ma_plot(deg_results, rev(cell_types),padj_thresh = 0.1, "Water vs Ctrl")
-# p_blum_ctrl <- create_celltype_deg_plot(deg_results, cell_types, "Blumeria vs Ctrl")
-p_water_blum <- create_ma_plot(deg_results, rev(cell_types),padj_thresh = 0.1, "Water vs Blumeria")
+p_water_ctrl <- create_ma_plot(deg_results, rev(cell_types),padj_thresh = 0.05, "MCT-Water vs Control")
+p_blum_ctrl <- create_ma_plot(deg_results, rev(cell_types),padj_thresh = 0.05, "MCT-Blumeria vs Control")
+p_water_blum <- create_ma_plot(deg_results, rev(cell_types),padj_thresh = 0.05, "MCT-Water vs MCT-Blumeria")
 
 # Combine using patchwork
-p_ma_combined <- (p_water_ctrl | p_water_blum) +
-  plot_annotation(
-    title = "DEGs (adj. p-value < 0.05, l2fc > 0.5)",theme = theme(plot.title = element_text(hjust = 0.5))
-  )
+p_ma_combined <- (p_water_ctrl | p_water_blum) #+
+  
+p_ma_combined_3 <- (p_water_ctrl | p_blum_ctrl | p_water_blum)
+
+# plot_annotation(
+    # title = "DEGs (adj. p-value < 0.05, l2fc > 0.5)",theme = theme(plot.title = element_text(hjust = 0.5))
+  # )
 
 print(p_ma_combined)
 
 ggsave(
-  filename = "04-results/MA_Combined_Plot_p_05.png",
+  filename = "04-results/Differential_Expression_Plot_p_05.png",
   plot = p_ma_combined,
-  width = 12.8,
-  height = 7.2,
+  # width = 12.8,
+  # height = 7.2,
+  width = 4.25*2,
+  height = 2.39*2,
+  units = "in",
+  dpi = 300
+)
+
+p <- p_ma_combined_3 +
+  coord_cartesian(clip = "off") +
+  theme(
+    plot.margin = margin(t = 20, r = 10, b = 25, l = 10)
+  )
+
+ggsave(
+  filename = "04-results/Differential_Expression_Plot_combined3.png",
+  plot = p,
+  width = 12,
+  height = 4.5,
+  units = "in",
+  dpi = 300
+)
+
+ggsave(
+  filename = "04-results/Differential_Expression_Plot_water_vs_ctrl.png",
+  plot = p_water_ctrl,
+  width = 7,
+  height = 4,
+  units = "in",
+  dpi = 300
+)
+
+ggsave(
+  filename = "04-results/Differential_Expression_Plot_blum_vs_ctrl.png",
+  plot = p_blum_ctrl,
+  width = 7,
+  height = 4,
+  units = "in",
+  dpi = 300
+)
+
+ggsave(
+  filename = "04-results/Differential_Expression_Plot_water_vs_blum.png",
+  plot = p_water_blum,
+  width = 7,
+  height = 4,
+  units = "in",
   dpi = 300
 )
 
@@ -361,4 +336,6 @@ ggsave("04-results/Volcano_Cardiomyocytes_p005.png", p_p005,
 
 # ----
 run_pseudobulk_deg(seu_obj, "Cardiomyocytes", 
+                   alpha = 0.2, save_results = TRUE)
+run_pseudobulk_deg(seu_obj, "Macrophages", 
                    alpha = 0.2, save_results = TRUE)
