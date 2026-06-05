@@ -639,13 +639,25 @@ write.csv(
 ```
 
 ```{r}
-#If necessary, read in data, then umap. 
-
 macro_data <- readRDS("./03-analysis_scratch/macro_data.rds")
 
-macro_data <- FindNeighbors(macro_data, reduction = "harmony", dims = 1:50)
+macro_data[["RNA"]] <- split(macro_data[["RNA"]], f = macro_data$condition)
+
+macro_data <- FindVariableFeatures(macro_data) %>% ScaleData() %>% RunPCA(verbose = FALSE)
+
+macro_data <- IntegrateLayers(
+  object = macro_data,
+  method = HarmonyIntegration,
+  orig.reduction = "pca",
+  new.reduction = "harmony",
+  verbose = FALSE
+)
+
+ElbowPlot(macro_data, reduction = "pca")
+
+macro_data <- FindNeighbors(macro_data, reduction = "harmony", dims = 1:20)
 macro_data <- FindClusters(macro_data, resolution = c(0.1,0.2, 0.3, 0.4))
-macro_data <- RunUMAP(macro_data, reduction = "harmony", dims = 1:50)
+macro_data <- RunUMAP(macro_data, reduction = "harmony", dims = 1:20)
 
 macro_data$condition <- factor(
   macro_data$condition,
@@ -658,7 +670,7 @@ DimPlot(
   group.by = "RNA_snn_res.0.1",
   split.by = "condition",
   label = TRUE
-)
+)+ coord_fixed(ratio = 1)
 
 ```
 
@@ -668,58 +680,183 @@ Idents(macro_data) <- "RNA_snn_res.0.1" # set active resolution
 table(Idents(macro_data), macro_data$condition)
 ```
 ```{r}
-# Define clusters to REMOVE
-bad_clusters <- c(3)
-
-# Get all cells from bad clusters
-bad_cells <- unlist(lapply(bad_clusters, function(x) WhichCells(macro_data, idents = x)))
-
-# Remove them ALL at once
-macro_data <- macro_data[, !colnames(macro_data) %in% bad_cells]
+# 1. subset out the true macrophage clusters
+macro_data <- subset(macro_data, idents = c(0, 1, 2))
+# 2. Drop the empty Cluster 3 factor level from the object metadata
+macro_data$RNA_snn_res.0.1 <- droplevels(macro_data$RNA_snn_res.0.1)
 
 table(Idents(macro_data))
+table(Idents(macro_data), macro_data$condition)
 ```
 
 ```{r}
+macro_data <- JoinLayers(macro_data)
+
 macro_markers_cluster0  <- FindConservedMarkers(macro_data, ident.1 = 0,  grouping.var = "condition")
 macro_markers_cluster1 <- FindConservedMarkers(macro_data, ident.1 = 1, grouping.var = "condition")
 macro_markers_cluster2  <- FindConservedMarkers(macro_data, ident.1 = 2,  grouping.var = "condition")
-# macro_markers_cluster3 <- FindConservedMarkers(macro_data, ident.1 = 3, grouping.var = "condition")
-# macro_markers_cluster4 <- FindConservedMarkers(macro_data, ident.1 = 4, grouping.var = "condition")
-# macro_markers_cluster5 <- FindConservedMarkers(macro_data, ident.1 = 5, grouping.var = "condition")
-# macro_markers_cluster6 <- FindConservedMarkers(macro_data, ident.1 = 6, grouping.var = "condition")
-# macro_markers_cluster7 <- FindConservedMarkers(macro_data, ident.1 = 7, grouping.var = "condition")
+macro_markers_cluster3 <- FindConservedMarkers(macro_data, ident.1 = 3, grouping.var = "condition")
+
+```
+```{r}
+macro_markers_cluster0
+macro_markers_cluster1
+macro_markers_cluster2
+macro_markers_cluster3
 ```
 
+
 ```{r}
-# Define your markers of interest (using rat/mouse nomenclature capitalize styles appropriately)
-resident_markers <- c("Timd4", "Lyve1", "Mertk", "Cd163")
-recruited_markers <- c("Ccr2", "S100a8", "S100a9", "Cx3cr1")
-alt_recruited_markers <- c("Ccr2", "Plac8", "Chil3", "Il1b", "Fn1", "Thbs1") # Alternative recruited markers better suited for single-nuc data
+# Define your markers of interest 
+resident_markers <- c("Lyve1", "Cd163", "Mertk")
+recruited_markers <- c("Lyz2", "Alcam", "Plac8")
 
 # Visualize with DotPlot 
-DotPlot(macro_data, features = c(resident_markers, recruited_markers)) + 
+DotPlot(macro_data, features = c(resident_markers,
+                                 recruited_markers)) + 
   RotatedAxis()
 
-# Visualize with FeaturePlot to see spatial UMAP distribution
-FeaturePlot(macro_data, features = c("Lyve1", "Fn1"), split.by = "condition")
+```
+```{r}
+# 1. Define your markers (in order of how you want them to appear)
+markers <- c(
+  "Lyve1", "Cd163", "Mertk", # Top Row: Resident
+  "Lyz2", "Alcam", "Plac8"   # Bottom Row: Recruited
+)
 
-# using the alternative markers for recruited 
-DotPlot(macro_data, features = c(resident_markers,alt_recruited_markers)) + RotatedAxis()
+# 2. Generate the perfectly symmetrical, standardized plot
+p <- FeaturePlot(
+  macro_data_clean,          # Make sure you are using your subsetted object!
+  features = markers,
+  reduction = "umap",
+  pt.size = 0.3,
+  order = TRUE,
+  ncol = 3,                  # Forces 3 columns, creating a perfect 2x3 grid
+  # keep.scale = "all",        # Standardizes the color scale across all 6 plots
+  max.cutoff = "q99",        # Trims the top 1% of extreme outliers so the colors pop
+  combine = TRUE
+) & 
+  coord_fixed(ratio = 1) &   # Notice the '&' - this locks EVERY plot's axes perfectly
+  theme(
+    axis.title = element_blank(),
+    axis.text = element_blank(),
+    axis.ticks = element_blank(),
+    axis.line = element_blank(),   # This removes the ugly black L-brackets
+    panel.border = element_blank(),
+    plot.title = element_text(
+      face = "italic", 
+      hjust = 0.5, 
+      size = 14
+    )
+  )
 
+p
+
+ggsave("04-results/macrophage_marker_plot.png", plot = p, width = 10, height = 5, dpi = 300)
 ```
 
 ```{r}
 # Rename Clusters - needs to be verified that this is correct
-macro_data <- RenameIdents(macro_data, '0' = 'Recruited?') 
-macro_data <- RenameIdents(macro_data, '1' = 'Resident?')
-macro_data <- RenameIdents(macro_data, '2' = 'Transitional?')
+macro_data <- RenameIdents(
+  macro_data,
+  `0` = "Resident",
+  `1` = "Recruited",
+  `2` = "Recruited"
+)
 ```
 ```{r}
-# can use this to find percent abundance of annotated subcluster
-table(Idents(macro_data), macro_data$condition)
+# Calculate Percent Abundance of Macrophages subclusters
+macro_cell_counts <- table(Idents(macro_data), macro_data$condition)
+macro_cell_pct <- prop.table(macro_cell_counts, margin = 2) * 100
+
+# Print percentages as a second, distinct formatted table
+knitr::kable(round(macro_cell_pct, 2), caption = "--- PERCENTAGES BY GROUP ---")
+
+# Convert the table into a 'long' data.frame for ggplot
+df_props <- as.data.frame(macro_cell_pct)
+colnames(df_props) <- c("Cluster", "Condition", "Percentage")
+df_props$Condition <- factor(df_props$Condition, levels = c("Control", "MCT-Water", "MCT-Blumeria"))
+df_props$Cluster <- factor(df_props$Cluster, levels = c("Recruited", "Resident"))
 ```
 
+```{r}
+p_dim <- DimPlot(
+  macro_data,
+  reduction = "umap",
+  split.by = "condition",
+  cols = c(
+    "Recruited" = "#C9B4D5",
+    "Resident" = "#5A2A82"),
+  pt.size = 0.5,
+  label = FALSE 
+) & 
+  coord_fixed(ratio = 1) & 
+  theme(
+    axis.title = element_blank(),
+    axis.text = element_blank(),
+    axis.ticks = element_blank(),
+    axis.line = element_blank(),
+    panel.border = element_rect(color = "black", fill = NA, linewidth = 0.5),
+    strip.text = element_text(size = 14, face = "bold"),
+    legend.position = "none", # <- TURNED OFF!
+    plot.margin = margin(t=10,r=10,b=-200,l=10)
+  ) &
+  ggtitle(NULL)
+
+p_bar <- ggplot(df_props, aes(x = "1", y = Percentage, fill = Cluster)) +
+  # reverse = TRUE physically forces Recruited (Green) to plot from 0 (the Left side)
+  geom_bar(stat = "identity", width = 1, color = "black", linewidth = 0.3, 
+           position = position_stack(reverse = TRUE)) +
+  coord_flip(clip = "off") + 
+  facet_wrap(~ Condition, ncol = 3) + 
+  scale_fill_manual(
+    values = c(
+      "Recruited" = "#C9B4D5",
+      "Resident" = "#5A2A82"
+    ),
+    # This dictates the Legend order strictly (Green on left, Red on right)
+    breaks = c("Recruited", "Resident") 
+  ) +
+  geom_text(aes(label = paste0(round(Percentage, 1), "%")), 
+            # reverse = TRUE ensures the text perfectly aligns with the reversed bars
+            position = position_stack(reverse = TRUE, vjust = 0.5), 
+            size = 3.5, color = "black") +
+  labs(title="Relative Abundance (%)") +
+  theme_minimal() + 
+  theme(
+    # Center the title and add a little breathing room below it
+    plot.title = element_text(hjust = 0.5, size = 12, margin = margin(b = 10)),
+    
+    # Strip out backgrounds and axes (from your old code)
+    strip.background = element_blank(),
+    strip.text       = element_blank(),
+    panel.background = element_blank(),
+    plot.background  = element_blank(),
+    panel.grid       = element_blank(),
+    axis.title       = element_blank(), 
+    axis.text.x      = element_blank(),
+    axis.ticks.x     = element_blank(),
+    axis.text.y      = element_blank(),   
+    axis.ticks.y     = element_blank(),
+    
+    # Keep the legend at the bottom for this plot
+    legend.position  = "bottom",
+    legend.title     = element_blank(),
+    legend.text      = element_text(size = 12),
+    
+    # Keep panel spacing and your negative margin to pull it up to the UMAPs
+    panel.spacing    = unit(2, "lines"), 
+    plot.margin      = margin(t = -15, r = 20, b = 10, l = 20)
+  )
+
+# 3. Stack them
+final_figure <- p_dim / p_bar + 
+  plot_layout(heights = c(10, 1))
+
+final_figure
+
+ggsave("04-results/macrophage_stacked_plots.png", plot = final_figure, width = 10, height = 5, dpi = 300)
+```
 
 
 
