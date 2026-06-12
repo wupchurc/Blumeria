@@ -93,28 +93,20 @@ plot_gsea <- function(gsea_result, top_n = 10, direction = "both",
       # CHANGE 3: Adjust lineheight for wrapped text and increase font weight/size
       axis.text.y = element_text(size = 12, color = "black", lineheight = 0.8, face = "bold"),
       axis.text.x = element_text(size = 12, color = "black"),
-      axis.title.x = element_text(size = 14, face = "bold", margin = margin(t = 10)),
+      axis.title.x = element_text(size = 10, face = "bold", margin = margin(t = 5)),
       axis.title.y = element_blank(),
       plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
       
       # CHANGE 4: Add margins so long text strings aren't squeezed against the edge
       plot.margin = margin(t = 15, r = 15, b = 15, l = 10)
     ) +
-    labs(x = "Normalized Enrichment Score (NES)", title = plot_title)
+    # labs(x = "Normalized Enrichment Score (NES)", title = plot_title)
+    labs(x = NULL, title = plot_title)
   
   return(p)
 }
 
 # ---- Cardiomyocytes ----
-
-# 1. Extract the ranked list for your specific contrast
-ranked_list_ctrl <- get_ranked_list(cm_results$water_vs_ctrl)
-# 2. Run the GSEA across ALL ontologies
-gsea_all_ctrl <- run_single_gsea_all(ranked_list_ctrl)
-# 3. Convert ENTREZID back to SYMBOLs (so the core enrichment reads as gene names)
-gsea_all_ctrl <- setReadable(gsea_all_ctrl, 
-                             OrgDb = org.Rn.eg.db, 
-                             keyType = "ENTREZID")
 
 # 1. Extract the ranked list for your specific contrast
 ranked_list_blum <- get_ranked_list(cm_results$water_vs_blum)
@@ -128,82 +120,24 @@ gsea_all_blum <- setReadable(gsea_all_blum,
 cardiac_blacklist <- c("behavior", "axon", "synapse", "neurotrans", "postsynaptic", 
                        "ranvier", "AMPA", "glutamate", "dopamine", "presynaptic")
 
-# Water vs Blumeria
-# 1. Generate the clean BP plots
-p_wvb_suppressed <- plot_gsea(
-  gsea_all_blum, top_n = 10, direction = "down", drop_keywords = cardiac_blacklist, target_ontology = "BP"
-)
-
-p_wvb_activated <- plot_gsea(
-  gsea_all_blum, top_n = 10, direction = "up", drop_keywords = cardiac_blacklist, target_ontology = "BP"
-)
 
 # Water vs Blumeria
 p_wvb_suppressed <- plot_gsea(
   gsea_all_blum, top_n = 10, direction = "down", 
   drop_keywords = cardiac_blacklist, target_ontology = "BP",
-  plot_title = "Suppressed Pathways: Water vs Blumeria"
+  plot_title = "Cardiomyocytes: Suppressed Pathways"
 )
 
 p_wvb_activated <- plot_gsea(
   gsea_all_blum, top_n = 10, direction = "up", 
   drop_keywords = cardiac_blacklist, target_ontology = "BP",
-  plot_title = "Activated Pathways: Water vs Blumeria"
+  plot_title = "Cardiomyocytes: Activated Pathways"
 )
 
 # 2. Count rows to automatically scale the panel heights flawlessly
 rows_suppressed_c <- nrow(p_wvb_suppressed$data)
-rows_activated_d  <- nrow(p_wvb_activated$data)
+rows_activated_b  <- nrow(p_wvb_activated$data)
 
-# Water vs Control
-# 1. Generate the clean BP plots
-p_wvc_suppressed <- plot_gsea(
-  gsea_all_ctrl, top_n = 10, direction = "down", drop_keywords = cardiac_blacklist, target_ontology = "BP"
-)
-
-
-
-p_wvc_activated <- plot_gsea(
-  gsea_all_ctrl, top_n = 10, direction = "up", drop_keywords = cardiac_blacklist, target_ontology = "BP"
-)
-
-# 2. Count rows to automatically scale the panel heights flawlessly
-rows_suppressed_a <- nrow(p_wvc_suppressed$data)
-rows_activated_b  <- nrow(p_wvc_activated$data)
-
-# 3. Stack vertically with proportional spacing
-final_figure <- p_wvc_suppressed / p_wvc_activated / p_wvb_suppressed / p_wvb_activated + 
-  plot_layout(heights = c(rows_suppressed_a, rows_activated_b,rows_suppressed_c, rows_activated_d )) 
-
-final_figure <- final_figure +
-  # plot_layout(heights = cm_heights, title = "Cardiomyocytes") +
-  plot_annotation(
-    title = "Cardiomyocytes", # Sub-header for the first stack
-    tag_levels = list(c("A", "B", "C", "D"))
-    ) &
-  theme(
-    plot.title = element_text(family = "Arial", size = 12, face = "bold", hjust = 0.5, margin = margin(b = -5)),
-    plot.title.position = "panel",
-    plot.tag = element_text(
-      family = "Arial",   # Forces Arial font
-      size = 17,          # Sets the precise font size
-      face = "bold",      # Keeps it crisp and bold
-      hjust = 0,          # Micro-adjustments to align perfectly top-left
-      vjust = 1
-    )
-  )
-
-final_figure_shrunk_cm <- final_figure & 
-  theme(axis.text.y = element_text(size = 7, color = "black"))
-
-ggsave(
-  filename = "./04-results/Figure_Pathway_Analysis_GSEA_Cardiomyocytes.png",
-  plot = final_figure_shrunk_cm,
-  width = 11,      # 8 inches is great for a single-column layout
-  height = 7,      # Shorter height works well since we removed CC and MF text
-  units = "in",
-  dpi = 300
-)
 
 gsea_list <- list(
   "Cardiomyocytes: Water vs Control" = gsea_all_ctrl,   # Replace with your actual object names
@@ -233,102 +167,33 @@ for (dataset_name in names(gsea_list)) {
 
 # ---- Macrophages ----
 # 1. Extract the ranked list for your specific contrast
-ranked_list_ctrl <- get_ranked_list(mac_results$water_vs_ctrl)
+ranked_list_blum_mac <- get_ranked_list(mac_results$water_vs_blum)
 # 2. Run the GSEA across ALL ontologies
-gsea_all_ctrl <- run_single_gsea_all(ranked_list_ctrl)
+gsea_all_blum_mac <- run_single_gsea_all(ranked_list_blum_mac)
 # 3. Convert ENTREZID back to SYMBOLs (so the core enrichment reads as gene names)
-gsea_all_ctrl <- setReadable(gsea_all_ctrl, 
+gsea_all_blum_mac <- setReadable(gsea_all_blum_mac, 
                              OrgDb = org.Rn.eg.db, 
                              keyType = "ENTREZID")
 
-# 1. Extract the ranked list for your specific contrast
-ranked_list_blum <- get_ranked_list(mac_results$water_vs_blum)
-# 2. Run the GSEA across ALL ontologies
-gsea_all_blum <- run_single_gsea_all(ranked_list_blum)
-# 3. Convert ENTREZID back to SYMBOLs (so the core enrichment reads as gene names)
-gsea_all_blum <- setReadable(gsea_all_blum, 
-                             OrgDb = org.Rn.eg.db, 
-                             keyType = "ENTREZID")
-
-cardiac_blacklist <- c("behavior", "axon", "synapse", "neurotrans", "postsynaptic", 
-                       "ranvier", "AMPA", "glutamate", "dopamine", "presynaptic")
-
 # Water vs Blumeria
-# 1. Generate the clean BP plots
-p_wvb_suppressed <- plot_gsea(
-  gsea_all_blum, top_n = 10, direction = "down", drop_keywords = cardiac_blacklist, target_ontology = "BP"
-)
-
-p_wvb_activated <- plot_gsea(
-  gsea_all_blum, top_n = 10, direction = "up", drop_keywords = cardiac_blacklist, target_ontology = "BP"
-)
-
-# Water vs Blumeria
-p_wvb_suppressed <- plot_gsea(
-  gsea_all_blum, top_n = 10, direction = "down", 
+p_wvb_suppressed_mac <- plot_gsea(
+  gsea_all_blum_mac, top_n = 10, direction = "down", 
   drop_keywords = cardiac_blacklist, target_ontology = "BP",
-  plot_title = "Suppressed Pathways: Water vs Blumeria"
+  plot_title = "Macrophages: Suppressed Pathways"
 )
 
-p_wvb_activated <- plot_gsea(
-  gsea_all_blum, top_n = 10, direction = "up", 
+p_wvb_activated_mac <- plot_gsea(
+  gsea_all_blum_mac, top_n = 10, direction = "up", 
   drop_keywords = cardiac_blacklist, target_ontology = "BP",
-  plot_title = "Activated Pathways: Water vs Blumeria"
+  plot_title = "Macrophages: Activated Pathways"
 )
 
 # 2. Count rows to automatically scale the panel heights flawlessly
-rows_suppressed_c <- nrow(p_wvb_suppressed$data)
-rows_activated_d  <- nrow(p_wvb_activated$data)
+rows_suppressed_e <- nrow(p_wvb_suppressed_mac$data)
+rows_activated_d  <- nrow(p_wvb_activated_mac$data)
 
-# Water vs Control
-# 1. Generate the clean BP plots
-p_wvc_suppressed <- plot_gsea(
-  gsea_all_ctrl, top_n = 10, direction = "down", drop_keywords = cardiac_blacklist, target_ontology = "BP"
-)
-
-p_wvc_activated <- plot_gsea(
-  gsea_all_ctrl, top_n = 10, direction = "up", drop_keywords = cardiac_blacklist, target_ontology = "BP"
-)
-
-# 2. Count rows to automatically scale the panel heights flawlessly
-rows_suppressed_a <- nrow(p_wvc_suppressed$data)
-rows_activated_b  <- nrow(p_wvc_activated$data)
-
-# 3. Stack vertically with proportional spacing
-final_figure <- p_wvc_suppressed / p_wvc_activated / p_wvb_suppressed / p_wvb_activated + 
-  plot_layout(heights = c(rows_suppressed_a, rows_activated_b,rows_suppressed_c, rows_activated_d )) 
-
-final_figure <- final_figure +
-  plot_annotation(
-    title = "Macrophages", # Sub-header for the second stack
-    tag_levels = list(c("E", "F", "G", "H"))
-    ) &
-  theme(
-    plot.title = element_text(family = "Arial", size = 12, face = "bold", hjust = 0.5, margin = margin(b = -5)),
-    plot.title.position = "panel",
-    plot.tag = element_text(
-      family = "Arial",   # Forces Arial font
-      size = 17,          # Sets the precise font size
-      face = "bold",      # Keeps it crisp and bold
-      hjust = 0,          # Micro-adjustments to align perfectly top-left
-      vjust = 1
-    )
-  )
-
-final_figure_shrunk_mac <- final_figure & 
-  theme(axis.text.y = element_text(size = 7, color = "black"))
-
-ggsave(
-  filename = "./04-results/Figure_Pathway_Analysis_GSEA_Macrophages.png",
-  plot = final_figure_shrunk_mac,
-  width = 11,      # 8 inches is great for a single-column layout
-  height = 7,      # Shorter height works well since we removed CC and MF text
-  units = "in",
-  dpi = 300
-)
 
 gsea_list <- list(
-  "Macrophages: Water vs Control" = gsea_all_ctrl,   # Replace with your actual object names
   "Macrophages: Water vs Blumeria" = gsea_all_blum
 )
 # Loop through each dataset and calculate the counts
@@ -354,6 +219,91 @@ for (dataset_name in names(gsea_list)) {
 }
 
 
+
+
+final_figure <- p_wvb_activated/ p_wvb_suppressed/ p_wvb_activated_mac/ p_wvb_suppressed_mac  +
+  plot_layout(heights = c( rows_activated_b,rows_suppressed_c, rows_activated_d, rows_suppressed_e))
+
+
+final_figure <- final_figure +
+  plot_annotation(
+    title = "MCT-Water vs MCT-Blumeria", # Sub-header for the first stack
+    # tag_levels = list(c("B","C","D","E")),
+    theme = theme(
+      plot.title = element_text(family = "Arial", size = 14, face = "bold", hjust = 0.86)
+  )
+) +
+  xlab("Normalized Enrichment Score (NES)") &
+  theme(
+    plot.title = element_text(family = "Arial", size = 12, face = "bold", hjust = 0.5, margin = margin(b = 0)),
+    plot.title.position = "panel",
+    plot.tag = element_text(
+      family = "Arial",   # Forces Arial font
+      size = 17,          # Sets the precise font size
+      face = "bold",      # Keeps it crisp and bold
+      hjust = 0,          # Micro-adjustments to align perfectly top-left
+      vjust = 1
+    ),
+    axis.title.x = element_text(size=10, face = "bold")
+  )
+
+final_figure_shrunk <- final_figure & 
+  theme(axis.text.y = element_text(size = 7, color = "black"))
+
+ggsave(
+  filename = "./04-results/Figure_Pathway_Analysis_GSEA.png",
+  plot = final_figure_shrunk,
+  width = 11,      # 8 inches is great for a single-column layout
+  height = 7,      # Shorter height works well since we removed CC and MF text
+  units = "in",
+  dpi = 300
+)
+# ----
+
+# 1. Layout the plots as usual
+final_figure <- p_wvb_activated / p_wvb_suppressed / p_wvb_activated_mac / p_wvb_suppressed_mac +
+  plot_layout(heights = c(rows_activated_b, rows_suppressed_c, rows_activated_d, rows_suppressed_e))
+
+# 2. Apply global theme settings to all SUBPLOTS first using '&'
+final_figure <- final_figure &
+  theme(
+    plot.title = element_text(family = "Arial", size = 12, face = "bold", hjust = 0.5, margin = margin(b = 0)),
+    plot.title.position = "panel",
+    plot.tag = element_text(
+      family = "Arial",   
+      size = 17,          
+      face = "bold",      
+      hjust = 0,          
+      vjust = 1
+    ),
+    axis.title.x = element_text(size = 10, face = "bold")
+  )
+
+# 3. Add the main title and shared x-label LAST using '+' so they don't get overwritten
+final_figure <- final_figure +
+  xlab("Normalized Enrichment Score (NES)") +
+  plot_annotation(
+    title = "MCT-Water vs MCT-Blumeria",
+    # tag_levels = list(c("B", "C", "D", "E")),
+    theme = theme(
+      # This will now safely work! Start around 0.62 and adjust if needed
+      plot.title = element_text(family = "Arial", size = 24, face = "bold", hjust = 0.6)
+    )
+  )
+
+# 4. Apply your final y-axis font shrinkage for export
+final_figure_shrunk <- final_figure & 
+  theme(axis.text.y = element_text(size = 7, color = "black"))
+
+
+ggsave(
+  filename = "./04-results/Figure_Pathway_Analysis_GSEA_.png",
+  plot = final_figure_shrunk,
+  width = 11,      # 8 inches is great for a single-column layout
+  height = 7,      # Shorter height works well since we removed CC and MF text
+  units = "in",
+  dpi = 300
+)
 
 
 
@@ -599,4 +549,3 @@ dotplot(gsea_single$water_vs_blum, showCategory = 10) + ggtitle("CM water_vs_blu
 
 
 
-# ---- Single GSEA ALL Ontologies----
