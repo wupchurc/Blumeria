@@ -127,6 +127,7 @@ seu_integrated <- seu_integrated[, !colnames(seu_integrated) %in% bad_cells]
 # Idents(seu_integrated) <- "seurat_clusters"
 # seu_integrated <- RunUMAP(seu_integrated, dims = 1:20)
 DimPlot(seu_integrated, label = TRUE)
+
 table(Idents(seu_integrated))  # Verify bad clusters gone 
 
 
@@ -149,8 +150,8 @@ celltype_order <- c(
   "Vascular EC",
   "Endocardial EC",
   "Lymphatic EC",
-  # "Glial Cells"
-  "Neural"
+  "Glial Cells"
+  # "Neural"
 )
 
 # Define colors matching celltype_order 
@@ -166,8 +167,8 @@ cell_cols <- c(
   "Vascular EC"    = "#F0E442",
   "Endocardial EC"        = "#009E73",
   "Lymphatic EC"        = "#56B4E9",
-  # "Glial Cells"       = "#E69F00"
-  "Neural" = "#E69F00"
+  "Glial Cells"       = "#E69F00"
+  # "Neural" = "#E69F00"
 )
 
 # Make cell_type a factor with that order
@@ -175,6 +176,20 @@ seu_integrated$cell_type <- factor(
   seu_integrated$cell_type,
   levels = celltype_order
 )
+
+
+# Create a new metadata column mapping full names to abbreviations (wrapped in unname)
+seu_integrated$cell_type_abbr <- unname(cell_abbr[as.character(seu_integrated$cell_type)])
+# Make it a factor to maintain your custom celltype_order
+seu_integrated$cell_type_abbr <- factor(
+  seu_integrated$cell_type_abbr,
+  levels = unname(cell_abbr[celltype_order]) # Keeps your exact order, just abbreviated
+)
+
+# Create a matching color palette for the abbreviations
+cell_cols_abbr <- cell_cols
+names(cell_cols_abbr) <- unname(cell_abbr[names(cell_cols)])
+
 
 # ---- Heatmap of markers used to validate cell type identities ----
 all_markers <- c(
@@ -192,15 +207,17 @@ all_markers <- c(
   "Cdh19", "Scn7a", "Lgi4"                     # neuronal/ glia marker
 )
 
-p_heat <- DoHeatmap(subset(seu_integrated, downsample = 1000),
+p_heat <- DoHeatmap(subset(seu_integrated, downsample = 500),
           features = all_markers,
-          size = 3,
+          size = 4,
           hjust = 0.5,
           vjust = - 1.5,
           angle = 0, 
           group.bar.height = 0.06,
-          group.by = "cell_type",
-          group.colors = cell_cols) + 
+          # group.by = "cell_type",
+          # group.colors = cell_cols)
+          group.by = "cell_type_abbr",         # <--- Changed to new metadata column
+          group.colors = cell_cols_abbr) + 
   guides(color = "none") + 
   labs(fill = "Z-score") 
 
@@ -210,7 +227,7 @@ ggsave(
   filename = "04-results/celltype_markers_heatmap.png",  # or .png, .tiff
   plot     = p_heat,
   width    = 16,   # adjust as needed
-  height   = 6,
+  height   = 16,
   dpi      = 300
 )
 
@@ -254,18 +271,18 @@ p_umap <- DimPlot(
   split.by   = "condition",
   label      = TRUE,
   # label      = FALSE,
-  label.size = 4,
+  label.size = 5,
   cols       = cell_cols          # <— key line
 ) +
   NoGrid() + 
   NoLegend() +
-  coord_cartesian(clip = "off") +
+  coord_cartesian( clip = "off") +
   theme(
     axis.line   = element_blank(),
     axis.ticks  = element_blank(),
     axis.text   = element_blank(),
     axis.title  = element_blank(),
-    plot.margin = margin(t = 5, r = 5, b = 5, l = 30),
+    plot.margin = margin(t = 5, r = 5, b = -25, l = 30),
     legend.text = element_text(size = 20)
   ) +
   geom_segment(
@@ -279,7 +296,7 @@ p_umap <- DimPlot(
            x = origin_x + len, y = origin_y,
            label = "UMAP1", vjust = 1.5, size = 3) +
   annotate("text",
-           x = origin_x - 0.25, y = origin_y + len,
+           x = origin_x - 0.35, y = origin_y + len,
            label = "UMAP2", hjust = 0.5, angle = 90, size = 3)
 
 # counts per cell type per condition
@@ -295,7 +312,7 @@ df_prop <- as.data.frame(tab_prop) %>%
 
 # Extracting Percent Abundances
 df_percentages_long <- df_prop %>%
-  mutate(Percentage = round(Proportion * 100, 2)) %>%
+  mutate(Percentage = round(Proportion * 100, 1)) %>%
   select(-Proportion) # Removes the fractional column
 print("--- Long Format Percentages ---")
 print(df_percentages_long)
@@ -308,33 +325,33 @@ write.csv(df_percentages_wide,
           file = "04-results/cell_type_percent_abundance.csv", 
           row.names = FALSE)
 
-p_bar <- ggplot(df_prop,
-                aes(x = 1, y = Proportion, fill = CellType)) +
-  geom_col(position = "fill", color = "black", width = 1) +
-  coord_flip() +
-  facet_wrap(~ Condition, nrow = 1) +
-  scale_fill_manual(values = cell_cols, guide = "none") +
-  xlab(NULL) +   # now appears above the bars
-  ylab(NULL) +
-  theme_minimal() +
-  labs(title = "Relative Abundance (%)") +
-  theme(
-    plot.title = element_text(hjust = 0.5),
-    strip.background = element_blank(),
-    strip.text       = element_blank(),
-    panel.background = element_blank(),
-    plot.background  = element_blank(),
-    panel.grid       = element_blank(),
-    axis.text.x      = element_blank(),  # keep digits hidden
-    axis.ticks.x     = element_blank(),
-    axis.text.y      = element_blank(),   
-    axis.ticks.y     = element_blank()
-  )
+# p_bar <- ggplot(df_prop,
+                # aes(x = 1, y = Proportion, fill = CellType)) +
+  # geom_col(position = "fill", color = "black", width = 1) +
+  # coord_flip() +
+  # facet_wrap(~ Condition, nrow = 1) +
+  # scale_fill_manual(values = cell_cols, guide = "none") +
+  # xlab(NULL) +   # now appears above the bars
+  # ylab(NULL) +
+  # theme_minimal() +
+  # labs(title = "Relative Abundance (%)") +
+  # theme(
+    # plot.title = element_text(hjust = 0.5),
+    # strip.background = element_blank(),
+    # strip.text       = element_blank(),
+    # panel.background = element_blank(),
+    # plot.background  = element_blank(),
+    # panel.grid       = element_blank(),
+    # axis.text.x      = element_blank(),  # keep digits hidden
+    # axis.ticks.x     = element_blank(),
+    # axis.text.y      = element_blank(),   
+    # axis.ticks.y     = element_blank()
+  # )
 
 # plot combined graphs
-p_combined <- p_umap / p_bar + plot_layout(heights = c(12, 1))
+# p_combined <- p_umap / p_bar + plot_layout(heights = c(12, 1.5))
 
-print(p_combined)
+# print(p_combined)
 
 
 
@@ -346,7 +363,7 @@ print(p_combined)
 cell_abbr <- c(
   "Cardiomyocytes"  = "CM",
   "Fibroblasts"     = "FB",
-  "Macrophages"     = "Mp", 
+  "Macrophages"     = "M\u03A6", 
   "Monocytes"       = "Mono",
   "Dendritic Cells" = "DC",
   "Neutrophils"     = "Neu",
@@ -355,14 +372,15 @@ cell_abbr <- c(
   "Vascular EC"     = "vEC",
   "Endocardial EC"  = "eEC",
   "Lymphatic EC"    = "lEC",
-  "Neural"          = "Neural" # Mapping your new 'Neural' back to 'Glia' for the label
+  "Glial Cells"     = "Glia"
+  # "Neural"          = "Neural" # Mapping your new 'Neural' back to 'Glia' for the label
 )
 
 # 2. Calculate percentages, create the label string, and find midpoints
 df_bar_data <- df_prop %>%
   mutate(
     # Keep the two decimal places you had previously
-    Percentage = round(Proportion * 100, 2),
+    Percentage = round(Proportion * 100, 1),
     
     # Combine Abbreviation, "=", Percentage, and "%" (e.g., "FB=35.28%")
     Label = paste0(cell_abbr[as.character(CellType)], "=", Percentage, "%") 
@@ -390,7 +408,15 @@ df_labels <- df_bar_data %>%
     
     # NEW: Bring the rows closer together
     # Top row at 0.55, Bottom row at 0.35 (less vertical gap)
-    v_pos = ifelse(row_number() %% 2 != 0, 0.55, 0.35)
+    # v_pos = ifelse(row_number() %% 2 != 0, 0.55, 0.35)
+    
+    # NEW: Stagger across 3 rows instead of 2 to prevent horizontal overlap
+    v_pos = case_when(
+      row_number() %% 3 == 1 ~ 0.65, # Top row (closest to the bar)
+      row_number() %% 3 == 2 ~ 0.40, # Middle row
+      row_number() %% 3 == 0 ~ 0.15  # Bottom row
+    )
+    
   ) %>%
   ungroup()
 
@@ -402,11 +428,11 @@ p_bar <- ggplot(df_bar_data, aes(x = 1, y = Proportion, fill = CellType)) +
   geom_col(position = "stack", color = "black", width = 0.4) + 
   
   # 2. The colored circles (Reduced size to 2.5)
-  geom_point(data = df_labels, aes(x = v_pos, y = label_pos, color = CellType), size = 2.5) +
+  geom_point(data = df_labels, aes(x = v_pos, y = label_pos, color = CellType), size = 3) +
   
   # 3. The text labels (Reduced size to 2.8, smaller nudge)
   geom_text(data = df_labels, aes(x = v_pos, y = label_pos, label = Label), 
-            hjust = 0, nudge_y = 0.015, size = 2.8) +
+            hjust = 0, nudge_y = 0.015, size = 5) +
   
   # Adjusted xlim to c(0.2, 1.2) to trim dead space at the bottom now that rows are tighter
   coord_flip(xlim = c(0.2, 1.2), ylim = c(0, 1), clip = "off") + 
@@ -431,7 +457,7 @@ p_bar <- ggplot(df_bar_data, aes(x = 1, y = Proportion, fill = CellType)) +
   )
 
 # plot combined graphs (Reduced height slightly from 2.5 to 2.2 since we tightened the rows)
-p_combined <- p_umap / p_bar + plot_layout(heights = c(12, 2.2))
+p_combined <- p_umap / p_bar + plot_layout(heights = c(5, 1))
 
 print(p_combined)
 
@@ -441,7 +467,7 @@ ggsave(
   filename = "04-results/umap_rel_abundance.png",
   plot     = p_combined,
   width    = 24,    # adjust as needed
-  height   = 8,
+  height   = 10,
   units = "in",
   dpi      = 300
 )
