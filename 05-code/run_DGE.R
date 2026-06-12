@@ -4,6 +4,7 @@ library(DESeq2)
 library(tidyverse)
 library(patchwork)
 library(EnhancedVolcano)
+library(ggtext)
 
 # seu_obj <- readRDS("rds_files/seu_for_DGE.rds")
 seu_obj <- readRDS("03-analysis_scratch/seu_for_DGE.rds")
@@ -145,7 +146,7 @@ create_ma_plot <- function(deg_results, cell_types, contrast_name,
   for (i in seq_along(cell_types)) {
     cell_type <- cell_types[i]
     
-    # Extract the appropriate contrast
+    # Extract the appropriate contrast (logic remains unbroken!)
     if (contrast_name == "MCT-Water vs Control") {
       res <- deg_results[[cell_type]]$water_vs_ctrl
     } else if (contrast_name == "MCT-Water vs MCT-Blumeria") {
@@ -153,7 +154,7 @@ create_ma_plot <- function(deg_results, cell_types, contrast_name,
     } else if (contrast_name == "MCT-Blumeria vs Control") {
       res <- deg_results[[cell_type]]$blum_vs_ctrl
     }
-      
+    
     # Convert to data frame
     df <- as.data.frame(res) %>%
       mutate(
@@ -178,6 +179,9 @@ create_ma_plot <- function(deg_results, cell_types, contrast_name,
   # Set up cell type order and colors
   plot_data$cell_type <- factor(plot_data$cell_type, levels = cell_types)
   
+  # ---- NEW: Format title for italics ----
+  display_title <- gsub("Blumeria", "<i>Blumeria</i>", contrast_name)
+  
   # Create the plot
   p <- ggplot(plot_data, aes(x = cell_type_num, y = log2FoldChange)) +
     ylim(-10,10)+
@@ -194,15 +198,16 @@ create_ma_plot <- function(deg_results, cell_types, contrast_name,
     # Labels and theme
     scale_x_continuous(breaks = 1:length(cell_types),
                        labels = cell_types) +
-    labs(title = contrast_name,
+    labs(title = display_title, # <-- Use the formatted title here
          x = NULL,
          y = "Log2FoldChange") +
     theme_minimal() +
     theme(
-      axis.text.x = element_text(angle = 45, hjust = 1, size = 9),
+      axis.text.x = element_text(angle = 45, hjust = 1, size = 12, face = "bold", color = "black"),
       panel.grid.major.x = element_blank(),
       panel.grid.minor = element_blank(),
-      plot.title = element_text(hjust = 0.5, face = "bold", size = 12)
+      # ---- NEW: Use element_markdown to parse the <i> tags ----
+      plot.title = ggtext::element_markdown(hjust = 0.5, face = "bold", size = 16) 
     )
   
   # Add count annotations at top and bottom
@@ -214,23 +219,24 @@ create_ma_plot <- function(deg_results, cell_types, contrast_name,
   for (i in seq_along(cell_types)) {
     p <- p + annotate("text", x = i, 
                       y = y_max*0.95,
-                      label = up_counts[i], color = "#E31A1C", size = 2, fontface = "bold")
+                      label = up_counts[i], color = "#E31A1C", size = 3, fontface = "bold")
   }
   
   # DOWN counts (bottom, in blue)
   for (i in seq_along(cell_types)) {
     p <- p + annotate("text", x = i, 
                       y = y_min*0.95,
-                      label = down_counts[i], color = "#1F78B4", size = 2, fontface = "bold")
+                      label = down_counts[i], color = "#1F78B4", size = 3, fontface = "bold")
   }
   
   p <- p + annotate("text", x = length(cell_types) + 0.8, y = y_max * 0.95,
-                    label = "UP", color = "#E31A1C", size = 2.5, fontface = "bold") +
+                    label = "UP", color = "#E31A1C", size = 4, fontface = "bold") +
     annotate("text", x = length(cell_types) + 0.8, y = y_min * 0.95,
-             label = "DOWN", color = "#1F78B4", size = 2.5, fontface = "bold")
+             label = "DOWN", color = "#1F78B4", size = 4, fontface = "bold")
   
   return(p)
 }
+
 
 # Create plots for each contrast
 p_water_ctrl <- create_ma_plot(deg_results, rev(cell_types),padj_thresh = 0.05, "MCT-Water vs Control")
@@ -242,34 +248,35 @@ p_ma_combined <- (p_water_ctrl | p_water_blum) #+
   
 p_ma_combined_3 <- (p_water_ctrl | p_blum_ctrl | p_water_blum)
 
+p_combined_paper <- (p_water_ctrl | p_blum_ctrl)
 # plot_annotation(
     # title = "DEGs (adj. p-value < 0.05, l2fc > 0.5)",theme = theme(plot.title = element_text(hjust = 0.5))
   # )
 
-print(p_ma_combined)
+print(p_combined_paper)
 
 ggsave(
   filename = "04-results/Differential_Expression_Plot_p_05.png",
-  plot = p_ma_combined,
-  # width = 12.8,
-  # height = 7.2,
-  width = 4.25*2,
-  height = 2.39*2,
-  units = "in",
+  plot = p_combined_paper,
+  width = 12,
+  height = 8,
+  # width = 4.25*2,
+  # height = 2.39*2,
+  # units = "in",
   dpi = 300
 )
 
-p <- p_ma_combined_3 +
+p <- p_combined_paper +
   coord_cartesian(clip = "off") +
   theme(
     plot.margin = margin(t = 20, r = 10, b = 25, l = 10)
   )
 
 ggsave(
-  filename = "04-results/Differential_Expression_Plot_combined3.png",
+  filename = "04-results/Differential_Expression_Plot.png",
   plot = p,
   width = 12,
-  height = 4.5,
+  height = 6,
   units = "in",
   dpi = 300
 )
