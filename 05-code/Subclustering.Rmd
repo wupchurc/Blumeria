@@ -18,6 +18,7 @@ library(clusterProfiler)
 library(enrichplot)
 library(org.Rn.eg.db)
 library(ggtangle)
+library(ggtext)
 ```
 
 ```{r}
@@ -659,10 +660,14 @@ macro_data <- FindNeighbors(macro_data, reduction = "harmony", dims = 1:20)
 macro_data <- FindClusters(macro_data, resolution = c(0.1,0.2, 0.3, 0.4))
 macro_data <- RunUMAP(macro_data, reduction = "harmony", dims = 1:20)
 
+# 1. First, factor using the exact strings present in your raw data
 macro_data$condition <- factor(
   macro_data$condition,
   levels = c("Control", "MCT-Water", "MCT-Blumeria")
 )
+
+# 2. Next, rename the 3rd level to include the HTML italics tags
+levels(macro_data$condition)[levels(macro_data$condition) == "MCT-Blumeria"] <- "MCT-<i>Blumeria</i>"
 
 DimPlot(
   macro_data,
@@ -695,14 +700,14 @@ macro_data <- JoinLayers(macro_data)
 macro_markers_cluster0  <- FindConservedMarkers(macro_data, ident.1 = 0,  grouping.var = "condition")
 macro_markers_cluster1 <- FindConservedMarkers(macro_data, ident.1 = 1, grouping.var = "condition")
 macro_markers_cluster2  <- FindConservedMarkers(macro_data, ident.1 = 2,  grouping.var = "condition")
-macro_markers_cluster3 <- FindConservedMarkers(macro_data, ident.1 = 3, grouping.var = "condition")
+# macro_markers_cluster3 <- FindConservedMarkers(macro_data, ident.1 = 3, grouping.var = "condition")
 
 ```
 ```{r}
 macro_markers_cluster0
 macro_markers_cluster1
 macro_markers_cluster2
-macro_markers_cluster3
+# macro_markers_cluster3
 ```
 
 
@@ -710,10 +715,11 @@ macro_markers_cluster3
 # Define your markers of interest 
 resident_markers <- c("Lyve1", "Cd163", "Mertk")
 recruited_markers <- c("Lyz2", "Alcam", "Plac8")
-
+classic_rec <- c("Ccr2","S100a8","S100a9")
 # Visualize with DotPlot 
 DotPlot(macro_data, features = c(resident_markers,
-                                 recruited_markers)) + 
+                                 recruited_markers,
+                                 classic_rec)) + 
   RotatedAxis()
 
 ```
@@ -721,12 +727,13 @@ DotPlot(macro_data, features = c(resident_markers,
 # 1. Define your markers (in order of how you want them to appear)
 markers <- c(
   "Lyve1", "Cd163", "Mertk", # Top Row: Resident
-  "Lyz2", "Alcam", "Plac8"   # Bottom Row: Recruited
+  # "Lyz2", "Alcam", "Plac8"   # Bottom Row: Recruited
+  "Ccr2","S100a8","S100a9"
 )
 
 # 2. Generate the perfectly symmetrical, standardized plot
 p <- FeaturePlot(
-  macro_data_clean,          # Make sure you are using your subsetted object!
+  macro_data,          # Make sure you are using your subsetted object!
   features = markers,
   reduction = "umap",
   pt.size = 0.3,
@@ -764,6 +771,7 @@ macro_data <- RenameIdents(
   `2` = "Recruited"
 )
 ```
+
 ```{r}
 # Calculate Percent Abundance of Macrophages subclusters
 macro_cell_counts <- table(Idents(macro_data), macro_data$condition)
@@ -775,7 +783,10 @@ knitr::kable(round(macro_cell_pct, 2), caption = "--- PERCENTAGES BY GROUP ---")
 # Convert the table into a 'long' data.frame for ggplot
 df_props <- as.data.frame(macro_cell_pct)
 colnames(df_props) <- c("Cluster", "Condition", "Percentage")
-df_props$Condition <- factor(df_props$Condition, levels = c("Control", "MCT-Water", "MCT-Blumeria"))
+
+# Update this line to include the <i> tags!
+df_props$Condition <- factor(df_props$Condition, levels = c("Control", "MCT-Water", "MCT-<i>Blumeria</i>"))
+
 df_props$Cluster <- factor(df_props$Cluster, levels = c("Recruited", "Resident"))
 ```
 
@@ -797,7 +808,7 @@ p_dim <- DimPlot(
     axis.ticks = element_blank(),
     axis.line = element_blank(),
     panel.border = element_rect(color = "black", fill = NA, linewidth = 0.5),
-    strip.text = element_text(size = 14, face = "bold"),
+    strip.text = ggtext::element_markdown(size = 14, face = "bold"),
     legend.position = "none", # <- TURNED OFF!
     plot.margin = margin(t=10,r=10,b=-200,l=10)
   ) &
@@ -859,6 +870,9 @@ ggsave("04-results/macrophage_stacked_plots.png", plot = final_figure, width = 1
 ```
 
 
+```{r}
+
+```
 
 
 
