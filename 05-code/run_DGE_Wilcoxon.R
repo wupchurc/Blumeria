@@ -2,7 +2,6 @@
 library(Seurat)
 library(tidyverse)
 library(patchwork)
-library(EnhancedVolcano)
 library(ggtext)
 
 seu_obj <- readRDS("03-analysis_scratch/seu_for_DGE.rds")
@@ -92,7 +91,7 @@ deg_results <- list()
 cell_types <- levels(seu_obj)  
 for (cell_type in cell_types) {
   cat("\n=== Processing", cell_type, "===\n")
-  deg_results[[cell_type]] <- run_wilcox_deg(seu_obj, cell_type, save_results = FALSE)
+  deg_results[[cell_type]] <- run_wilcox_deg(seu_obj, cell_type, save_results = TRUE)
 }
 
 
