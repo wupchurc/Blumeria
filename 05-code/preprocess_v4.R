@@ -601,233 +601,111 @@ blum.7.seu <- subset(blum.7.seu,
                        nCount_RNA < quantile(blum.7.seu$nCount_RNA, 0.99) &
                        percent.mt < quantile(blum.7.seu$percent.mt, 0.99))
 
-# Add metadata ----
-
-ctrl.11.seu$sample <- "Control11"
-ctrl.11.seu$condition <- "Control"
-
-ctrl.12.seu$sample <- "Control12"
-ctrl.12.seu$condition <- "Control"
-
-ctrl.14.seu$sample <- "Control14"
-ctrl.14.seu$condition <- "Control"
-
-ctrl.15.seu$sample <- "Control15"
-ctrl.15.seu$condition <- "Control"
-
-water.1.seu$sample <- "Water1"
-water.1.seu$condition <- "MCT-Water"
-
-water.5.seu$sample <- "Water5"
-water.5.seu$condition <- "MCT-Water"
-
-water.6.seu$sample <- "Water6"
-water.6.seu$condition <- "MCT-Water"
-
-water.9.seu$sample <- "Water9"
-water.9.seu$condition <- "MCT-Water"
-
-blum.1.seu$sample <- "Blumeria1"
-blum.1.seu$condition <- "MCT-Blumeria"
-
-blum.3.seu$sample <- "Blumeria3"
-blum.3.seu$condition <- "MCT-Blumeria"
-
-blum.4.seu$sample <- "Blumeria4"
-blum.4.seu$condition <- "MCT-Blumeria"
-
-blum.7.seu$sample <- "Blumeria7"
-blum.7.seu$condition <- "MCT-Blumeria"
-
-# Combine and prepare for Seurat v5 integration ----
-
-seu_merge <- merge(
-  x = ctrl.11.seu,
-  y = list(
-    ctrl.12.seu, ctrl.14.seu, ctrl.15.seu,
-    water.1.seu, water.5.seu, water.6.seu, water.9.seu,
-    blum.1.seu, blum.3.seu, blum.4.seu, blum.7.seu
-  ),
-  add.cell.ids = c(
-    "Control11", "Control12", "Control14", "Control15",
-    "Water1", "Water5", "Water6", "Water9",
-    "Blumeria1", "Blumeria3", "Blumeria4", "Blumeria7"
-  ),
-  project = "All.Samples"
-)
-
-seu_merge$condition <- factor(
-  seu_merge$condition,
-  levels = c("Control", "MCT-Water", "MCT-Blumeria")
-)
-
-seu_merge$sample <- as.character(seu_merge$sample)
+# Old-style anchor workflow: RPCA + IntegrateData ----
 
 set.seed(1234)
 
-seu_merge <- NormalizeData(
-  seu_merge,
-  assay = "RNA",
-  normalization.method = "LogNormalize",
-  scale.factor = 10000,
-  verbose = FALSE
+sample.list <- list(
+  Control11 = ctrl.11.seu,
+  Control12 = ctrl.12.seu,
+  Control14 = ctrl.14.seu,
+  Control15 = ctrl.15.seu,
+  Water1 = water.1.seu,
+  Water5 = water.5.seu,
+  Water6 = water.6.seu,
+  Water9 = water.9.seu,
+  Blumeria1 = blum.1.seu,
+  Blumeria3 = blum.3.seu,
+  Blumeria4 = blum.4.seu,
+  Blumeria7 = blum.7.seu
 )
 
-seu_merge <- FindVariableFeatures(
-  seu_merge,
-  assay = "RNA",
-  selection.method = "vst",
-  nfeatures = 2000,
-  verbose = FALSE
+sample.conditions <- c(
+  Control11 = "Control",
+  Control12 = "Control",
+  Control14 = "Control",
+  Control15 = "Control",
+  Water1 = "MCT-Water",
+  Water5 = "MCT-Water",
+  Water6 = "MCT-Water",
+  Water9 = "MCT-Water",
+  Blumeria1 = "MCT-Blumeria",
+  Blumeria3 = "MCT-Blumeria",
+  Blumeria4 = "MCT-Blumeria",
+  Blumeria7 = "MCT-Blumeria"
 )
 
-seu_merge <- ScaleData(
-  seu_merge,
-  assay = "RNA",
-  verbose = FALSE
+for (sample.name in names(sample.list)) {
+  sample.list[[sample.name]]$sample <- sample.name
+  sample.list[[sample.name]]$condition <-
+    sample.conditions[[sample.name]]
+  
+  sample.list[[sample.name]] <- RenameCells(
+    sample.list[[sample.name]],
+    add.cell.id = sample.name
+  )
+}
+
+# Check that all cell names are unique
+stopifnot(
+  all(!duplicated(unlist(lapply(sample.list, colnames))))
 )
 
-seu_merge <- RunPCA(
-  seu_merge,
-  assay = "RNA",
-  npcs = 30,
-  seed.use = 1234,
-  verbose = FALSE
+# Reprocess each filtered sample for RPCA
+sample.list <- lapply(
+  sample.list,
+  function(x) {
+    DefaultAssay(x) <- "RNA"
+    
+    x <- NormalizeData(x)
+    x <- FindVariableFeatures(x)
+    x <- ScaleData(x)
+    x <- RunPCA(x)
+    x
+  }
 )
 
-saveRDS(
-  seu_merge,
-  file = "03-analysis_scratch/seu_v5_preintegration.rds"
+# Find anchors using RPCA
+anchors <- FindIntegrationAnchors(
+  object.list = sample.list,
+  reduction = "rpca"
 )
 
-# ----Create UMAPs with RPCA Integration----
+# Integrate the samples
+seu_int <- IntegrateData(anchorset = anchors)
 
-seu_rpca <- readRDS(
-  "03-analysis_scratch/seu_v5_preintegration.rds"
+# Analyze the integrated assay
+DefaultAssay(seu_int) <- "integrated"
+seu_int <- ScaleData(seu_int)
+seu_int <- RunPCA(seu_int)
+seu_int <- FindNeighbors(seu_int, dims = 1:20)
+seu_int <- FindClusters(seu_int, resolution = c(0.1, 0.2, 0.3, 0.4, 0.5), random.seed = 1234)
+seu_int <- RunUMAP(seu_int, dims = 1:20, seed.use = 1234, reduction.name = "umap.integrated")
+
+# Set condition order
+seu_int$condition <- factor(
+  seu_int$condition,
+  levels = c(
+    "Control",
+    "MCT-Water",
+    "MCT-Blumeria"
+  )
 )
 
-set.seed(1234)
-
-seu_rpca <- IntegrateLayers(
-  object = seu_rpca,
-  method = RPCAIntegration,
-  orig.reduction = "pca",
-  new.reduction = "integrated.rpca",
-  assay = "RNA",
-  verbose = FALSE
+# Check available cluster columns
+grep(
+  "snn_res",
+  colnames(seu_int@meta.data),
+  value = TRUE
 )
 
-seu_rpca <- FindNeighbors(
-  seu_rpca,
-  reduction = "integrated.rpca",
-  dims = 1:20,
-  graph.name = "rpca_snn"
-)
-
-seu_rpca <- FindClusters(
-  seu_rpca,
-  graph.name = "rpca_snn",
-  cluster.name = "rpca_clusters",
-  resolution = 0.2,
-  random.seed = 1234
-)
-
-seu_rpca <- RunUMAP(
-  seu_rpca,
-  reduction = "integrated.rpca",
-  dims = 1:20,
-  seed.use = 1234,
-  reduction.name = "umap.rpca"
-)
-
-# seu_merge <- FindNeighbors(seu_merge, reduction = "integrated.rpca", dims = 1:20)
-# seu_merge <- FindClusters(seu_merge, resolution = c(0.1, 0.2, 0.3, 0.4, 0.5))
-# seu_merge <- RunUMAP(seu_merge, reduction = "integrated.rpca", dims = 1:20)
-
-# seu_merge$condition <- factor(
-  # seu_merge$condition,
-  # levels = c("Control", "MCT-Water", "MCT-Blumeria")
-# )
-
-saveRDS(
-  seu_rpca,
-  file = "03-analysis_scratch/seu_v5_rpca.rds"
-)
-
+# Plot by condition
 DimPlot(
-  seu_rpca,
-  reduction = "umap.rpca",
+  seu_int,
+  reduction = "umap.integrated",
   group.by = "condition",
   split.by = "condition",
   label = FALSE
 )
 
-DimPlot(
-  seu_rpca,
-  reduction = "umap.rpca",
-  group.by = "rpca_clusters",
-  split.by = "condition",
-  label = TRUE
-)
-
-#----Create UMAPs with Harmony Integration----
-
-seu_harmony <- readRDS(
-  "03-analysis_scratch/seu_v5_preintegration.rds"
-)
-
-set.seed(1234)
-
-seu_harmony <- IntegrateLayers(
-  object = seu_harmony,
-  method = HarmonyIntegration,
-  orig.reduction = "pca",
-  new.reduction = "harmony",
-  assay = "RNA",
-  verbose = FALSE
-)
-
-seu_harmony <- FindNeighbors(
-  seu_harmony,
-  reduction = "harmony",
-  dims = 1:20,
-  graph.name = "harmony_snn"
-)
-
-seu_harmony <- FindClusters(
-  seu_harmony,
-  graph.name = "harmony_snn",
-  cluster.name = "harmony_clusters",
-  resolution = 0.2,
-  random.seed = 1234
-)
-
-seu_harmony <- RunUMAP(
-  seu_harmony,
-  reduction = "harmony",
-  dims = 1:20,
-  seed.use = 1234,
-  reduction.name = "umap.harmony"
-)
-
-saveRDS(
-  seu_harmony,
-  file = "03-analysis_scratch/seu_v5_harmony.rds"
-)
-
-DimPlot(
-  seu_harmony,
-  reduction = "umap.harmony",
-  group.by = "condition",
-  split.by = "condition",
-  label = FALSE
-)
-
-DimPlot(
-  seu_harmony,
-  reduction = "umap.harmony",
-  group.by = "harmony_clusters",
-  split.by = "condition",
-  label = TRUE
-)
-
+saveRDS(seu_int, file = "03-analysis_scratch/seu_preprocessed_v4.rds")
