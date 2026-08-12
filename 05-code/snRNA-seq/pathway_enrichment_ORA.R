@@ -7,7 +7,11 @@ library(ggplot2)
 library(patchwork)
 
 cm_results <- readRDS("03-analysis_scratch/DEG_Cardiomyocytes.rds")
+cm_wil_res <- readRDS("03-analysis_scratch/DEG_Wilcox_Cardiomyocytes.rds")
 mac_results <- readRDS("03-analysis_scratch/DEG_Macrophages.rds")
+mac_wil_res <- readRDS("03-analysis_scratch/DEG_Wilcox_Macrophages.rds")
+
+fb_wil_res <- readRDS("03-analysis_scratch/DEG_Wilcox_Fibroblasts.rds")
 
 #---- Function to process one DESeqResults → up/down ENTREZ lists ----
 get_sig_genes <- function(res, lfc_threshold = 0.5, padj_threshold = 0.05, 
@@ -52,6 +56,15 @@ get_sig_genes(res = cm_results$water_vs_blum, lfc_threshold = 0.5, padj_threshol
               comp_name = "water_vs_blum", cell_name = "cm", write_files = TRUE)
 get_sig_genes(res = cm_results$blum_vs_ctrl, lfc_threshold = 0.5, padj_threshold = 0.05, 
               comp_name = "blum_vs_ctrl", cell_name = "cm", write_files = TRUE)
+
+
+get_sig_genes(res = cm_wil_res$water_vs_blum, lfc_threshold = 0.5, padj_threshold = 0.05, 
+              comp_name = "water_vs_blum", cell_name = "cm", write_files = TRUE)
+get_sig_genes(res = mac_wil_res$water_vs_blum, lfc_threshold = 0.5, padj_threshold = 0.05, 
+              comp_name = "water_vs_blum", cell_name = "mac", write_files = TRUE)
+get_sig_genes(res = fb_wil_res$water_vs_blum, lfc_threshold = 0.5, padj_threshold = 0.05,
+              comp_name = "water_vs_blum", cell_name = "fb", write_files = TRUE)
+
 
 # ---- Refactored Code for ORA ----
 

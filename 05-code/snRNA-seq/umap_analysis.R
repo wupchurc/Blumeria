@@ -14,6 +14,9 @@ library(tidyr)
 # load processed seurat object from rds file 
 seu_integrated <- readRDS("03-analysis_scratch/seu_integrated_strict.rds")
 
+seu_merge <- readRDS("03-analysis_scratch/seu_merge_strict.rds")
+
+
 seu_integrated <- FindNeighbors(seu_integrated, reduction = "harmony", dims = 1:20)
 seu_integrated <- FindClusters(seu_integrated, resolution = c(0.1, 0.2, 0.3, 0.4, 0.5))
 seu_integrated <- RunUMAP(seu_integrated, reduction = "harmony", dims = 1:20)

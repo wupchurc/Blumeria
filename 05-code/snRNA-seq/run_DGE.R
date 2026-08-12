@@ -6,8 +6,8 @@ library(patchwork)
 library(EnhancedVolcano)
 library(ggtext)
 
-# seu_obj <- readRDS("rds_files/seu_for_DGE.rds")
 seu_obj <- readRDS("03-analysis_scratch/seu_for_DGE.rds")
+
 
 # ---- Consolidated Pseudobulking and DESeq2 Function ----
 run_pseudobulk_deg <- function(seu_obj, cell_type, min_counts = 10, alpha = 0.05,
@@ -75,24 +75,6 @@ run_pseudobulk_deg <- function(seu_obj, cell_type, min_counts = 10, alpha = 0.05
   cat("\nBlumeria vs Water:\n"); summary(res_blum_vs_water)
   cat("\nWater vs Blumeria:\n"); summary(res_water_vs_blum)
   
-  # Normalize data for PCA
-  # rld <- vst(dds, blind = FALSE)
-  
-  # Generate plots
-  # title <- ifelse(is.null(plot_title), cell_type, plot_title)
-  
-  # p_pca <- plotPCA(rld, intgroup = "condition") +
-  # stat_ellipse(level = 0.95, alpha = 0.3, geom = "polygon") +
-  # ggtitle(paste("Pseudoulk PCA:", title))
-  
-  # p_ma_water <- plotMA(res_water_vs_ctrl) + ggtitle("MA: Water vs Control")
-  # p_ma_water_blum <- plotMA(res_water_vs_blum) + ggtitle("MA: Water vs Blumeria")
-  
-  # Display plots
-  # print(p_pca)
-  # print(p_ma_water)
-  # print(p_ma_water_blum)
-  
   # Save results if requested
   if (save_results) {
     results_list <- list(
@@ -100,8 +82,6 @@ run_pseudobulk_deg <- function(seu_obj, cell_type, min_counts = 10, alpha = 0.05
       blum_vs_ctrl = res_blum_vs_ctrl,
       blum_vs_water = res_blum_vs_water,
       water_vs_blum = res_water_vs_blum
-      # dds = dds
-      # rld = rld
     )
     
     filename <- paste0("DEG_", gsub("[^A-Za-z0-9]", "_", cell_type), ".rds")
