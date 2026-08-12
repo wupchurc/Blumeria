@@ -6,7 +6,7 @@ library(tidyverse)
 library(DoubletFinder)
 
 # Set R's global seed
-set.seed(1234)
+set.seed(42)
 
 # Load count matrix data from CellRanger ----
 # Control
@@ -820,122 +820,6 @@ saveRDS(
   file = "03-analysis_scratch/seu_v5_preintegration.rds"
 )
 
-# ----Create UMAPs with RPCA Integration----
-
-seu_rpca <- readRDS(
-  "03-analysis_scratch/seu_v5_preintegration.rds"
-)
-
-seu_rpca <- IntegrateLayers(
-  object = seu_rpca,
-  method = RPCAIntegration,
-  orig.reduction = "pca",
-  new.reduction = "integrated.rpca",
-  assay = "RNA",
-  verbose = FALSE
-)
-
-seu_rpca <- FindNeighbors(
-  seu_rpca,
-  reduction = "integrated.rpca",
-  dims = 1:20,
-  graph.name = "rpca_snn"
-)
-
-seu_rpca <- FindClusters(
-  seu_rpca,
-  graph.name = "rpca_snn",
-  cluster.name = "rpca_clusters",
-  resolution = 0.2
-)
-
-seu_rpca <- RunUMAP(
-  seu_rpca,
-  reduction = "integrated.rpca",
-  dims = 1:20,
-  reduction.name = "umap.rpca"
-)
-
-saveRDS(
-  seu_rpca,
-  file = "03-analysis_scratch/seu_v5_rpca.rds"
-)
-
-seu_rpca <- readRDS("03-analysis_scratch/seu_v5_rpca.rds")
-
-DimPlot(
-  seu_rpca,
-  reduction = "umap.rpca",
-  group.by = "condition",
-  split.by = "condition",
-  label = FALSE
-)
-
-DimPlot(
-  seu_rpca,
-  reduction = "umap.rpca",
-  group.by = "rpca_clusters",
-  split.by = "condition",
-  label = TRUE
-)
-
-#----Create UMAPs with Harmony Integration----
-
-seu_harmony <- readRDS(
-  "03-analysis_scratch/seu_v5_preintegration.rds"
-)
-
-seu_harmony <- IntegrateLayers(
-  object = seu_harmony,
-  method = HarmonyIntegration,
-  orig.reduction = "pca",
-  new.reduction = "harmony",
-  assay = "RNA",
-  verbose = FALSE
-)
-
-seu_harmony <- FindNeighbors(
-  seu_harmony,
-  reduction = "harmony",
-  dims = 1:20,
-  graph.name = "harmony_snn"
-)
-
-seu_harmony <- FindClusters(
-  seu_harmony,
-  graph.name = "harmony_snn",
-  cluster.name = "harmony_clusters",
-  resolution = 0.3
-)
-
-seu_harmony <- RunUMAP(
-  seu_harmony,
-  reduction = "harmony",
-  dims = 1:20,
-  reduction.name = "umap.harmony"
-)
-
-saveRDS(
-  seu_harmony,
-  file = "03-analysis_scratch/seu_v5_harmony.rds"
-)
-
-seu_harmony <- readRDS("03-analysis_scratch/seu_v5_harmony.rds")
 
 
-DimPlot(
-  seu_harmony,
-  reduction = "umap.harmony",
-  group.by = "condition",
-  split.by = "condition",
-  label = FALSE
-)
-
-DimPlot(
-  seu_harmony,
-  reduction = "umap.harmony",
-  group.by = "harmony_clusters",
-  split.by = "condition",
-  label = TRUE
-)
 
