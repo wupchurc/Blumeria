@@ -3,6 +3,7 @@
 .Rhistory
 .RData
 .Ruserdata
+.Renviron
 # Data/outputs
 *_scratch/
 00-metadata/
