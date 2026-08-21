@@ -3,21 +3,12 @@ library(Seurat)
 library(DESeq2)
 library(tidyverse)
 library(patchwork)
+# library(babelgene)
 
-library(presto)
-library(scCustomize)
-library(SummarizedExperiment)
-library(RColorBrewer)
-library(circlize)
-library(tidyr)
+# Load processed seurat object
+seu_rpca <- readRDS("03-analysis_scratch/seu_v5_preintegration.rds")
 
-
-# ----Create UMAPs with RPCA Integration----
-
-seu_rpca <- readRDS(
-  "03-analysis_scratch/seu_v5_preintegration.rds"
-)
-
+# Integrate with RPCA
 seu_rpca <- IntegrateLayers(
   object = seu_rpca,
   method = RPCAIntegration,
@@ -37,8 +28,7 @@ seu_rpca <- FindNeighbors(
 seu_rpca <- FindClusters(
   seu_rpca,
   graph.name = "rpca_snn",
-  cluster.name = "rpca_clusters",
-  resolution = 0.2
+  resolution = c(0.2,0.3,0.4)
 )
 
 seu_rpca <- RunUMAP(
@@ -48,12 +38,7 @@ seu_rpca <- RunUMAP(
   reduction.name = "umap.rpca"
 )
 
-saveRDS(
-  seu_rpca,
-  file = "03-analysis_scratch/seu_v5_rpca.rds"
-)
 
-seu_rpca <- readRDS("03-analysis_scratch/seu_v5_rpca.rds")
 
 DimPlot(
   seu_rpca,
@@ -66,7 +51,18 @@ DimPlot(
 DimPlot(
   seu_rpca,
   reduction = "umap.rpca",
-  group.by = "rpca_clusters",
+  group.by = "rpca_snn_res.0.3",
   split.by = "condition",
   label = TRUE
 )
+
+
+# use RNA counts/normalized data for DE
+DefaultAssay(seu_rpca) <- "RNA"
+seu_rpca <- JoinLayers(seu_rpca, assay = "RNA")
+
+Idents(seu_rpca) <- "rpca_snn_res.0.3"
+
+saveRDS(seu_rpca, file = "03-analysis_scratch/seu_v5_rpca.rds")
+
+# seu_rpca <- readRDS("03-analysis_scratch/seu_v5_rpca.rds")
