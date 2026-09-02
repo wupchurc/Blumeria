@@ -163,38 +163,67 @@ p_umap_split <- DimPlot(
   annotate("text", x = origin_x - 0.35, y = origin_y + len, label = "UMAP2", hjust = 0.5, angle = 90, size = 3)
 
 # 8. Calculate Relative Abundances for Bar Plot
-tab_counts <- table(CellType = Idents(seu_clean), Condition = seu_clean$condition)
-tab_prop <- prop.table(tab_counts, margin = 2)
+# tab_counts <- table(CellType = Idents(seu_clean), Condition = seu_clean$condition)
+# tab_prop <- prop.table(tab_counts, margin = 2)
 
-df_prop <- as.data.frame(tab_prop) %>% dplyr::rename(Proportion = Freq)
+# df_prop <- as.data.frame(tab_prop) %>% dplyr::rename(Proportion = Freq)
 
 # Process proportions, calculate midpoints for labels, and format percentages
-df_bar_data <- df_prop %>%
-  mutate(
-    Percentage = round(Proportion * 100, 1),
-    Label = paste0(cell_abbr[as.character(CellType)], "=", Percentage, "%") 
-  ) %>%
-  group_by(Condition) %>%
-  arrange(Condition, desc(CellType)) %>% 
-  mutate(
-    cumulative = cumsum(Proportion),
-    midpoint = cumulative - (Proportion / 2)
-  ) %>%
-  ungroup()
+# df_bar_data <- df_prop %>%
+  # mutate(
+    # Percentage = round(Proportion * 100, 1),
+    # Label = paste0(cell_abbr[as.character(CellType)], "=", Percentage, "%") 
+  # ) %>%
+  # group_by(Condition) %>%
+  # arrange(Condition, desc(CellType)) %>% 
+  # mutate(
+    # cumulative = cumsum(Proportion),
+    # midpoint = cumulative - (Proportion / 2)
+  # ) %>%
+  # ungroup()
 
 # Generate staggered label positions to prevent text overlap in the bar chart
-df_labels <- df_bar_data %>% 
-  group_by(Condition) %>%
-  arrange(Condition, midpoint) %>% 
-  mutate(
-    label_pos = seq(0.0, 0.88, length.out = n()),
-    v_pos = case_when(
-      row_number() %% 3 == 1 ~ 0.65, 
-      row_number() %% 3 == 2 ~ 0.40, 
-      row_number() %% 3 == 0 ~ 0.15  
-    )
+# df_labels <- df_bar_data %>% 
+  # group_by(Condition) %>%
+  # arrange(Condition, midpoint) %>% 
+  # mutate(
+    # label_pos = seq(0.0, 0.88, length.out = n()),
+    # v_pos = case_when(
+      # row_number() %% 3 == 1 ~ 0.65, 
+      # row_number() %% 3 == 2 ~ 0.40, 
+      # row_number() %% 3 == 0 ~ 0.15  
+    # )
+  # ) %>%
+  # ungroup()
+# 8. Calculate Sample-Level Proportions and Condition-Level Statistics
+sample_meta <- seu_clean@meta.data %>%
+  dplyr::select(sample, condition) %>%
+  dplyr::distinct()
+
+df_sample_props <- seu_clean@meta.data %>%
+  dplyr::count(sample, cell_type) %>%
+  tidyr::complete(sample, cell_type, fill = list(n = 0)) %>%
+  dplyr::group_by(sample) %>%
+  dplyr::mutate(
+    total_cells = sum(n),
+    proportion = n / total_cells,
+    percentage = proportion * 100
   ) %>%
-  ungroup()
+  dplyr::ungroup() %>%
+  dplyr::left_join(sample_meta, by = "sample")
+
+df_condition_stats <- df_sample_props %>%
+  dplyr::group_by(condition, cell_type) %>%
+  dplyr::summarize(
+    mean_prop = mean(proportion),
+    sd_prop   = sd(proportion),
+    mean_pct  = mean(percentage),
+    sd_pct    = sd(percentage),
+    .groups   = "drop"
+  )
+
+# Save statistics for downstream formal testing
+write.csv(df_condition_stats, "04-results/relative_abundance_stats.csv", row.names = FALSE)
 
 # 9. Create Bar Plot
 p_bar <- ggplot(df_bar_data, aes(x = 1, y = Proportion, fill = CellType)) +
