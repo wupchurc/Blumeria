@@ -5,7 +5,7 @@
 # Input:   03-analysis_scratch/seu_annotated.rds
 # Output:  04-results/umap_rel_abundance.png
 #          04-results/umap_combined.png
-#          
+#          03-analysis_scratch/seu_after_visualization.rds
 # ==============================================================================
 
 library(Seurat)
@@ -242,3 +242,6 @@ ggsave(
   units    = "in",
   dpi      = 300
 )
+
+saveRDS(seu_clean, "03-analysis_scratch/seu_after_visualization.rds")
+
