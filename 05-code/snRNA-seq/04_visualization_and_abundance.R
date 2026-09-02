@@ -225,7 +225,43 @@ df_condition_stats <- df_sample_props %>%
 # Save statistics for downstream formal testing
 write.csv(df_condition_stats, "04-results/relative_abundance_stats.csv", row.names = FALSE)
 
-# 9. Create Bar Plot
+# 9. Format Data for Bar Plot
+df_bar_data <- df_condition_stats %>%
+  # Rename columns to seamlessly fit your existing ggplot code
+  dplyr::rename(
+    Condition  = condition, 
+    CellType   = cell_type, 
+    Proportion = mean_prop, 
+    Percentage = mean_pct
+  ) %>%
+  group_by(Condition) %>%
+  # Normalize mean proportions so the stacked bars reach exactly 100% 
+  # (averaging replicates can sometimes equal 0.999 or 1.001)
+  mutate(Proportion = Proportion / sum(Proportion)) %>% 
+  arrange(Condition, desc(CellType)) %>% 
+  mutate(
+    Percentage = round(Proportion * 100, 1),
+    Label = paste0(cell_abbr[as.character(CellType)], "=", Percentage, "%"),
+    cumulative = cumsum(Proportion),
+    midpoint = cumulative - (Proportion / 2)
+  ) %>%
+  ungroup()
+
+# Generate staggered label positions to prevent text overlap in the bar chart
+df_labels <- df_bar_data %>% 
+  group_by(Condition) %>%
+  arrange(Condition, midpoint) %>% 
+  mutate(
+    label_pos = seq(0.0, 0.88, length.out = n()),
+    v_pos = case_when(
+      row_number() %% 3 == 1 ~ 0.65, 
+      row_number() %% 3 == 2 ~ 0.40, 
+      row_number() %% 3 == 0 ~ 0.15  
+    )
+  ) %>%
+  ungroup()
+
+# 10. Create Bar Plot
 p_bar <- ggplot(df_bar_data, aes(x = 1, y = Proportion, fill = CellType)) +
   geom_col(position = "stack", color = "black", width = 0.4) + 
   geom_point(data = df_labels, aes(x = v_pos, y = label_pos, color = CellType), size = 3) +
@@ -249,7 +285,7 @@ p_bar <- ggplot(df_bar_data, aes(x = 1, y = Proportion, fill = CellType)) +
     axis.ticks.y     = element_blank()
   )
 
-# 10. Combine Split Plot via Patchwork and Save Both Outputs
+# 11. Combine Split Plot via Patchwork and Save Both Outputs
 p_final <- p_umap_split / p_bar + plot_layout(heights = c(5, 1))
 
 # Save the split panel exactly as before
