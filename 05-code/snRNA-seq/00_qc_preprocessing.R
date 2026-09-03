@@ -1,3 +1,10 @@
+# ==============================================================================
+# Script: 00_qc_preprocessing.R
+# Purpose: 
+# Input:   Cell Ranger count matrices
+# Output:  03-analysis_scratch/seu_v5_preintegration.rds
+# ==============================================================================
+
 library(Seurat)
 library(ggplot2)
 library(tidyr)
