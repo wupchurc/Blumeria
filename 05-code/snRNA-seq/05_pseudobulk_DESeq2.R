@@ -1,5 +1,5 @@
 # ==============================================================================
-# Script: 05_DGE.R
+# Script: 05_pseudobulk_DESeq2.R
 # Purpose: Perform pseudobulk differential gene expression (DGE) analysis across 
 #          all cell types using DESeq2. Generate comparative MA plots and export 
 #          significant gene lists for downstream pathway enrichment (e.g., ShinyGO).
