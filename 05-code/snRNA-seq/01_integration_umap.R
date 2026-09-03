@@ -1,9 +1,15 @@
+# ==============================================================================
+# Script: 01_integration_umap.R
+# Purpose: 
+# Input:   03-analysis_scratch/seu_v5_preintegration.rds
+# Output:  03-analysis_scratch/seu_v5_rpca.rds
+# ==============================================================================
+
 # load libraries 
 library(Seurat)
 library(DESeq2)
 library(tidyverse)
 library(patchwork)
-# library(babelgene)
 
 # Load processed seurat object
 seu_rpca <- readRDS("03-analysis_scratch/seu_v5_preintegration.rds")
@@ -28,7 +34,7 @@ seu_rpca <- FindNeighbors(
 seu_rpca <- FindClusters(
   seu_rpca,
   graph.name = "rpca_snn",
-  resolution = c(0.2,0.3,0.4)
+  resolution = c(0.2,0.3,0.4,0.5,0.6)
 )
 
 seu_rpca <- RunUMAP(
@@ -37,8 +43,6 @@ seu_rpca <- RunUMAP(
   dims = 1:20,
   reduction.name = "umap.rpca"
 )
-
-
 
 DimPlot(
   seu_rpca,
@@ -51,7 +55,7 @@ DimPlot(
 DimPlot(
   seu_rpca,
   reduction = "umap.rpca",
-  group.by = "rpca_snn_res.0.3",
+  group.by = "rpca_snn_res.0.6",
   split.by = "condition",
   label = TRUE
 )
@@ -61,8 +65,6 @@ DimPlot(
 DefaultAssay(seu_rpca) <- "RNA"
 seu_rpca <- JoinLayers(seu_rpca, assay = "RNA")
 
-Idents(seu_rpca) <- "rpca_snn_res.0.3"
+Idents(seu_rpca) <- "rpca_snn_res.0.6"
 
 saveRDS(seu_rpca, file = "03-analysis_scratch/seu_v5_rpca.rds")
-
-# seu_rpca <- readRDS("03-analysis_scratch/seu_v5_rpca.rds")
