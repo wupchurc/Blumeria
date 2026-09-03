@@ -127,9 +127,9 @@ for (cell_type in cell_types) {
                                                  alpha = 0.2, save_results = FALSE)
 }
 
-# ---- Plotting Function: Summary MA Plot ----
+# ---- Plotting Function: Summary DEG Strip Plot ----
 # Generates a customized 1D scatter plot (strip chart) of Log2FoldChanges
-create_ma_plot <- function(deg_results, cell_types, contrast_name, 
+create_deg_summary_plot <- function(deg_results, cell_types, contrast_name, 
                            padj_thresh = 0.05, lfc_thresh = 0.5) {
   
   plot_data <- data.frame()
@@ -228,9 +228,9 @@ create_ma_plot <- function(deg_results, cell_types, contrast_name,
 
 # ---- Generate and Save Plots ----
 # Create plots for each contrast
-p_water_ctrl <- create_ma_plot(deg_results, rev(cell_types), padj_thresh = 0.05, lfc_thresh = 0.5, "MCT-Water vs Control")
-p_blum_ctrl <- create_ma_plot(deg_results, rev(cell_types), padj_thresh = 0.05, lfc_thresh = 0.5, "MCT-Blumeria vs Control")
-p_water_blum <- create_ma_plot(deg_results, rev(cell_types), padj_thresh = 0.05, lfc_thresh = 0.5, "MCT-Water vs MCT-Blumeria")
+p_water_ctrl <- create_deg_summary_plot(deg_results, rev(cell_types), padj_thresh = 0.05, lfc_thresh = 0.5, "MCT-Water vs Control")
+p_blum_ctrl <- create_deg_summary_plot(deg_results, rev(cell_types), padj_thresh = 0.05, lfc_thresh = 0.5, "MCT-Blumeria vs Control")
+p_water_blum <- create_deg_summary_plot(deg_results, rev(cell_types), padj_thresh = 0.05, lfc_thresh = 0.5, "MCT-Water vs MCT-Blumeria")
 
 # Combine main comparators side-by-side
 p_combined <- (p_water_ctrl | p_blum_ctrl)
