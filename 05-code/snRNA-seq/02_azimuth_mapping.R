@@ -61,17 +61,18 @@ seu_rpca$azimuth_score <- seu_human$predicted.celltype.l2.score
 
 # 6. Visualize Predictions ----
 # Plot original unsupervised clusters vs Azimuth predictions side-by-side
-p1 <- DimPlot(seu_rpca, reduction = "umap.rpca", group.by = "rpca_snn_res.0.3", label = TRUE) + 
-  ggtitle("Unsupervised Clusters (Res 0.3)")
+p1 <- DimPlot(seu_rpca, reduction = "umap.rpca", group.by = "rpca_snn_res.0.6", label = TRUE) + 
+  ggtitle("Unsupervised Clusters (Res 0.6)")
 
-p2 <- DimPlot(seu_rpca, reduction = "umap.rpca", group.by = "azimuth_l2", label = TRUE, repel = TRUE) + 
+p2 <- DimPlot(seu_rpca, reduction = "umap.rpca", group.by = "azimuth_l2", label = TRUE, repel = FALSE) + 
   ggtitle("Azimuth Predicted Cell Types (Level 2)")
 
 # Display plot
-p1 | p2
+p1 
+p2
 
 # Optional: Save visualization to file
-ggsave("03-analysis_scratch/umap_azimuth_predictions.pdf", plot = (p1 | p2), width = 20, height = 6)
+ggsave("03-analysis_scratch/umap_azimuth_predictions.pdf", plot = (p1 / p2), width = 10, height = 10)
 
 # 7. Save the Updated Object ----
 message("Saving updated Seurat object...")
