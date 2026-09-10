@@ -18,12 +18,19 @@ library(stringr)          # Text wrapping and string handling
 library(ggplot2)          # Publication-quality plotting
 library(patchwork)        # Plot composition and dynamic alignment
 library(cowplot)          # Additional layout and alignment tools
+library(msigdbr)
 
 # ---- 2. Input Data Loading ---------------------------------------------------
 # Load pseudobulk DESeq2 DEG list objects generated from script 05
 cm_results  <- readRDS("03-analysis_scratch/DEG_Cardiomyocyte.rds")
 mac_results <- readRDS("03-analysis_scratch/DEG_Macrophage.rds")
 
+# 1. Align cache location with R's session tempdir to avoid cross-device move warnings
+Sys.setenv(R_USER_CACHE_DIR = tempdir())
+
+# 2. Fetch Rat Hallmark gene sets using updated 'ncbi_gene' column name
+hallmark_t2g <- msigdbr(species = "Rattus norvegicus", collection = "H") %>%
+  dplyr::select(gs_name, ncbi_gene)
 # ---- 3. Helper Functions -----------------------------------------------------
 
 #' Extract and Rank Gene List for GSEA
@@ -54,25 +61,33 @@ get_ranked_list <- function(res) {
   return(gene_list)
 }
 
-#' Run Gene Ontology (Biological Process) GSEA
+#' Run MSigDB Hallmark GSEA
 #' 
 #' @param ranked_vec Named vector of ranked gene statistics (ENTREZIDs)
-#' @return gseaResult object containing enriched GO terms
-run_single_gsea <- function(ranked_vec) {
+#' @param t2g TERM2GENE dataframe from msigdbr
+#' @return gseaResult object containing enriched Hallmark terms
+run_hallmark_gsea <- function(ranked_vec, t2g) {
   set.seed(42) # Ensure reproducible random permutations
   
-  gseGO(
+  res <- GSEA(
     geneList      = ranked_vec,
-    OrgDb         = org.Rn.eg.db,
-    ont           = "BP",            # Target Biological Process ontology
-    keyType       = "ENTREZID",
+    TERM2GENE     = t2g,
     pvalueCutoff  = 0.05,            # FDR significance threshold
     pAdjustMethod = "BH",              # Benjamini-Hochberg adjustment
-    minGSSize     = 10,              # Exclude overly specific gene sets
-    maxGSSize     = 500,             # Exclude broad, non-specific gene sets
-    verbose       = FALSE,
-    seed          = TRUE
+    minGSSize     = 10,
+    maxGSSize     = 500,
+    verbose       = FALSE
   )
+  
+  # Clean up formatting for plotting (e.g., "HALLMARK_GLYCOLYSIS" -> "Glycolysis")
+  if (!is.null(res) && nrow(as.data.frame(res)) > 0) {
+    res@result$Description <- res@result$ID %>%
+      gsub("HALLMARK_", "", .) %>%
+      gsub("_", " ", .) %>%
+      stringr::str_to_title()
+  }
+  
+  return(res)
 }
 
 #' Plot Top Enriched GSEA Pathways as Horizontal Bar Charts
@@ -134,24 +149,24 @@ plot_gsea <- function(gsea_result, top_n = 10, direction = "up",
 
 # ---- 4. Define Filtering Blacklist -------------------------------------------
 # Keywords to strip non-cardiovascular neuronal/synaptic noise from GO annotation
-cardiac_blacklist <- c("behavior", "axon", "synapse", "neurotrans", "postsynaptic", 
-                       "ranvier", "AMPA", "glutamate", "dopamine", "presynaptic")
+# cardiac_blacklist <- c("behavior", "axon", "synapse", "neurotrans", "postsynaptic", 
+                       # "ranvier", "AMPA", "glutamate", "dopamine", "presynaptic")
 
 # ---- 5. Execute GSEA Workflow: Cardiomyocytes --------------------------------
 message("Processing GSEA for Cardiomyocytes...")
 
 # Extract contrast, calculate GSEA, and map IDs back to symbols
 ranked_list_cm <- get_ranked_list(cm_results$water_vs_blum)
-gsea_cm        <- run_single_gsea(ranked_list_cm)
+gsea_cm        <- run_hallmark_gsea(ranked_list_cm, hallmark_t2g)
 gsea_cm        <- setReadable(gsea_cm, OrgDb = org.Rn.eg.db, keyType = "ENTREZID")
 
 # Generate Activated & Suppressed pathway plots
 p_cm_up   <- plot_gsea(gsea_cm, top_n = 10, direction = "up", 
-                       drop_keywords = cardiac_blacklist, 
+                       # drop_keywords = cardiac_blacklist, 
                        plot_title = "Cardiomyocytes: Activated Pathways")
 
 p_cm_down <- plot_gsea(gsea_cm, top_n = 10, direction = "down", 
-                       drop_keywords = cardiac_blacklist, 
+                       # drop_keywords = cardiac_blacklist, 
                        plot_title = "Cardiomyocytes: Suppressed Pathways")
 
 # ---- 6. Execute GSEA Workflow: Macrophages -----------------------------------
@@ -159,16 +174,16 @@ message("Processing GSEA for Macrophages...")
 
 # Extract contrast, calculate GSEA, and map IDs back to symbols
 ranked_list_mac <- get_ranked_list(mac_results$water_vs_blum)
-gsea_mac        <- run_single_gsea(ranked_list_mac)
+gsea_mac        <- run_hallmark_gsea(ranked_list_mac, hallmark_t2g)
 gsea_mac        <- setReadable(gsea_mac, OrgDb = org.Rn.eg.db, keyType = "ENTREZID")
 
 # Generate Activated & Suppressed pathway plots
 p_mac_up   <- plot_gsea(gsea_mac, top_n = 10, direction = "up", 
-                        drop_keywords = cardiac_blacklist, 
+                        # drop_keywords = cardiac_blacklist, 
                         plot_title = "Macrophages: Activated Pathways")
 
 p_mac_down <- plot_gsea(gsea_mac, top_n = 10, direction = "down", 
-                        drop_keywords = cardiac_blacklist, 
+                        # drop_keywords = cardiac_blacklist, 
                         plot_title = "Macrophages: Suppressed Pathways")
 
 # ---- 7. Export CSV Tabular Results -------------------------------------------
@@ -206,7 +221,7 @@ final_figure <- final_figure +
 
 # Save figure file
 ggsave(
-  filename = "04-results/Figure_Pathway_Analysis_GSEA_WaterVsBlum.png", 
+  filename = "04-results/Figure_Pathway_Analysis_Hallmark_GSEA_WaterVsBlum.png", 
   plot     = final_figure, 
   width    = 11, 
   height   = 9, 
