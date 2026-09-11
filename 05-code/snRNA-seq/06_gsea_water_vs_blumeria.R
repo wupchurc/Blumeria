@@ -21,16 +21,27 @@ library(cowplot)          # Additional layout and alignment tools
 library(msigdbr)
 
 # ---- 2. Input Data Loading ---------------------------------------------------
-# Load pseudobulk DESeq2 DEG list objects generated from script 05
-cm_results  <- readRDS("03-analysis_scratch/DEG_Cardiomyocyte.rds")
-mac_results <- readRDS("03-analysis_scratch/DEG_Macrophage.rds")
+# Define all target cell types and load their pseudobulk DESeq2 results
+cell_types <- c("Cardiomyocyte", "Fibroblast", "Macrophage","Monocyte","Dendritic Cell",
+                "Neutrophil","T Cell", "B Cell", "NK Cell", "Pericyte", "Vascular EC",
+                "Endocardial EC", "Lymphatic EC", "Neuronal", "Epicardial EC")
 
-# 1. Align cache location with R's session tempdir to avoid cross-device move warnings
+deg_data <- lapply(cell_types, function(ct) {
+  file_path <- sprintf("03-analysis_scratch/DEG_%s.rds", ct)
+  if (file.exists(file_path)) {
+    readRDS(file_path)
+  } else {
+    warning(sprintf("File %s not found. Skipping %s.", file_path, ct))
+    NULL
+  }
+})
+names(deg_data) <- cell_types
+
+# Align cache location and fetch Rat Hallmark gene sets
 Sys.setenv(R_USER_CACHE_DIR = tempdir())
-
-# 2. Fetch Rat Hallmark gene sets using updated 'ncbi_gene' column name
 hallmark_t2g <- msigdbr(species = "Rattus norvegicus", collection = "H") %>%
   dplyr::select(gs_name, ncbi_gene)
+
 # ---- 3. Helper Functions -----------------------------------------------------
 
 #' Extract and Rank Gene List for GSEA
@@ -98,32 +109,45 @@ run_hallmark_gsea <- function(ranked_vec, t2g) {
 #' @param drop_keywords Vector of regex terms to filter non-cardiac pathways
 #' @param plot_title Title header for the subplot panel
 #' @return A ggplot bar chart object
-plot_gsea <- function(gsea_result, top_n = 10, direction = "up", 
+plot_gsea <- function(gsea_result, top_n = NULL, direction = "up", 
                       drop_keywords = NULL, plot_title = NULL) { 
   
   df <- as.data.frame(gsea_result)
+  if (nrow(df) == 0) return(NULL)
   
-  # Remove irrelevant non-cardiac off-target pathways (e.g., neuronal terms)
+  # Remove unwanted keywords if specified
   if (!is.null(drop_keywords)) {
     pattern <- paste(drop_keywords, collapse = "|")
     df <- df[!grepl(pattern, df$Description, ignore.case = TRUE), ]
   }
   
-  # Filter by NES direction and assign color schemes
+  # Filter by NES direction
   if (direction == "up") {
     df <- subset(df, NES > 0)
-    bar_color <- "#FC8D62" # Orange/Red for activated pathways
-    x_limits  <- c(0, 3) 
+    bar_color <- "#FC8D62"
   } else if (direction == "down") {
     df <- subset(df, NES < 0)
-    bar_color <- "#8DA0CB" # Blue for suppressed pathways
-    x_limits  <- c(-3, 0) 
+    bar_color <- "#8DA0CB"
   }
   
-  # Select and order top pathways by adjusted p-value and NES magnitude
-  plot_df <- df %>%
-    arrange(p.adjust) %>%            
-    slice_head(n = top_n) %>%        
+  # Exit early if no pathways match the direction filter
+  if (nrow(df) == 0) return(NULL)
+  
+  # Set dynamic axis limits after confirming data exists
+  if (direction == "up") {
+    x_limits <- c(0, max(3, ceiling(max(df$NES, na.rm = TRUE))))
+  } else {
+    x_limits <- c(min(-3, floor(min(df$NES, na.rm = TRUE))), 0)
+  }
+  
+  # Select pathways
+  plot_df <- df %>% arrange(p.adjust)
+  if (!is.null(top_n)) {
+    plot_df <- plot_df %>% slice_head(n = top_n)
+  }
+  
+  # Order factors by NES so bars plot in order of magnitude
+  plot_df <- plot_df %>%
     arrange(NES) %>% 
     mutate(Description = factor(Description, levels = unique(Description)))
   
@@ -131,7 +155,7 @@ plot_gsea <- function(gsea_result, top_n = 10, direction = "up",
   ggplot(plot_df, aes(x = NES, y = Description)) +
     geom_col(width = 0.8, color = "white", linewidth = 0.2, fill = bar_color) + 
     geom_vline(xintercept = 0, linetype = "dashed", color = "gray40", linewidth = 0.8) +
-    scale_y_discrete(labels = function(x) str_wrap(x, width = 45)) + # Wrap long pathway labels
+    scale_y_discrete(labels = function(x) stringr::str_wrap(x, width = 45)) + 
     scale_x_continuous(limits = x_limits) +
     theme_bw(base_size = 14) + 
     theme(
@@ -152,81 +176,87 @@ plot_gsea <- function(gsea_result, top_n = 10, direction = "up",
 # cardiac_blacklist <- c("behavior", "axon", "synapse", "neurotrans", "postsynaptic", 
                        # "ranvier", "AMPA", "glutamate", "dopamine", "presynaptic")
 
-# ---- 5. Execute GSEA Workflow: Cardiomyocytes --------------------------------
-message("Processing GSEA for Cardiomyocytes...")
+# ---- 5. Execute GSEA & Generate Figures Across Cell Types ---------------------
+gsea_results_list <- list()
+all_plots         <- list()
 
-# Extract contrast, calculate GSEA, and map IDs back to symbols
-ranked_list_cm <- get_ranked_list(cm_results$water_vs_blum)
-gsea_cm        <- run_hallmark_gsea(ranked_list_cm, hallmark_t2g)
-gsea_cm        <- setReadable(gsea_cm, OrgDb = org.Rn.eg.db, keyType = "ENTREZID")
+for (ct in names(deg_data)) {
+  if (is.null(deg_data[[ct]])) next
+  
+  message(sprintf("Processing Hallmark GSEA for %s...", ct))
+  
+  # 1. Extract contrast and run Hallmark GSEA
+  ranked_list <- get_ranked_list(deg_data[[ct]]$water_vs_blum)
+  gsea_res    <- run_hallmark_gsea(ranked_list, hallmark_t2g)
+  
+  if (!is.null(gsea_res) && nrow(as.data.frame(gsea_res)) > 0) {
+    gsea_res <- setReadable(gsea_res, OrgDb = org.Rn.eg.db, keyType = "ENTREZID")
+    gsea_results_list[[ct]] <- gsea_res
+    
+    # Clean filename by replacing spaces with underscores
+    clean_ct_name <- gsub(" ", "_", toupper(ct))
+    
+    # 2. Export CSV Table
+    write.csv(
+      as.data.frame(gsea_res), 
+      sprintf("04-results/%s_Water_vs_Blum_Hallmark_GSEA.csv", clean_ct_name), 
+      row.names = FALSE
+    )
+    
+    # Generate Activated and Suppressed Plots for ALL significant terms
+    p_up   <- plot_gsea(gsea_res, top_n = NULL, direction = "up", 
+                        plot_title = sprintf("%s: Activated Pathways", ct))
+    
+    p_down <- plot_gsea(gsea_res, top_n = NULL, direction = "down", 
+                        plot_title = sprintf("%s: Suppressed Pathways", ct))
+    
+    # Safely collect non-empty plots
+    if (!is.null(p_up) && !is.null(p_up$data) && nrow(p_up$data) > 0) {
+      all_plots[[paste0(ct, "_up")]] <- p_up
+    }
+    if (!is.null(p_down) && !is.null(p_down$data) && nrow(p_down$data) > 0) {
+      all_plots[[paste0(ct, "_down")]] <- p_down
+    }
+  } else {
+    message(sprintf("No significant Hallmark pathways found for %s.", ct))
+  }
+}
 
-# Generate Activated & Suppressed pathway plots
-p_cm_up   <- plot_gsea(gsea_cm, top_n = 10, direction = "up", 
-                       # drop_keywords = cardiac_blacklist, 
-                       plot_title = "Cardiomyocytes: Activated Pathways")
-
-p_cm_down <- plot_gsea(gsea_cm, top_n = 10, direction = "down", 
-                       # drop_keywords = cardiac_blacklist, 
-                       plot_title = "Cardiomyocytes: Suppressed Pathways")
-
-# ---- 6. Execute GSEA Workflow: Macrophages -----------------------------------
-message("Processing GSEA for Macrophages...")
-
-# Extract contrast, calculate GSEA, and map IDs back to symbols
-ranked_list_mac <- get_ranked_list(mac_results$water_vs_blum)
-gsea_mac        <- run_hallmark_gsea(ranked_list_mac, hallmark_t2g)
-gsea_mac        <- setReadable(gsea_mac, OrgDb = org.Rn.eg.db, keyType = "ENTREZID")
-
-# Generate Activated & Suppressed pathway plots
-p_mac_up   <- plot_gsea(gsea_mac, top_n = 10, direction = "up", 
-                        # drop_keywords = cardiac_blacklist, 
-                        plot_title = "Macrophages: Activated Pathways")
-
-p_mac_down <- plot_gsea(gsea_mac, top_n = 10, direction = "down", 
-                        # drop_keywords = cardiac_blacklist, 
-                        plot_title = "Macrophages: Suppressed Pathways")
-
-# ---- 7. Export CSV Tabular Results -------------------------------------------
-message("Exporting GSEA result tables...")
-
-write.csv(as.data.frame(gsea_cm),  "04-results/CM_Water_vs_Blum_GSEA.csv",  row.names = FALSE)
-write.csv(as.data.frame(gsea_mac), "04-results/MAC_Water_vs_Blum_GSEA.csv", row.names = FALSE)
-
-# ---- 8. Compose and Save Final Figure ----------------------------------------
-message("Assembling final publication figure...")
-
-# Stack panels and dynamically scale row heights based on term count
-final_figure <- p_cm_up / p_cm_down / p_mac_up / p_mac_down +
-  plot_layout(heights = c(
-    nrow(p_cm_up$data), 
-    nrow(p_cm_down$data), 
-    nrow(p_mac_up$data), 
-    nrow(p_mac_down$data)
-  ))
-
-# Apply unified theme settings across all panels
-final_figure <- final_figure &
-  theme(
-    plot.title = element_text(family = "Arial", size = 12, face = "bold", hjust = 0.5, margin = margin(b = 0)),
-    plot.title.position = "panel"
+# ---- 6. Compose and Save Final Master Figure ---------------------------------
+if (length(all_plots) > 0) {
+  message("Assembling final publication figure...")
+  
+  # Extract the number of pathways (rows) in each plot to use as relative heights
+  panel_heights <- sapply(all_plots, function(p) nrow(p$data))
+  
+  # Stack all non-empty subplots vertically and apply proportional heights
+  final_figure <- wrap_plots(all_plots, ncol = 1) +
+    plot_layout(heights = panel_heights) +
+    plot_annotation(
+      title = "MCT-Water vs MCT-Blumeria",
+      theme = theme(plot.title = element_text(family = "Arial", size = 20, face = "bold", hjust = 0.5))
+    )
+  
+  # Calculate a larger dynamic height (approx. 0.3 inches per pathway + margins)
+  total_pathways <- sum(panel_heights)
+  calc_height <- max(8, total_pathways * 0.3 + 3)
+  
+  # Save as PNG
+  ggsave(
+    filename = "04-results/Figure_Pathway_Analysis_GSEA_WaterVsBlum.png", 
+    plot     = final_figure, 
+    width    = 10, 
+    height   = calc_height, 
+    units    = "in", 
+    dpi      = 300
   )
-
-# Add master annotation title and shared X-axis label
-final_figure <- final_figure +
-  xlab("Normalized Enrichment Score (NES)") +
-  plot_annotation(
-    title = "MCT-Water vs MCT-Blumeria",
-    theme = theme(plot.title = element_text(family = "Arial", size = 20, face = "bold", hjust = 0.5))
+  
+  # Save as PDF for publication
+  ggsave(
+    filename = "04-results/Figure_Pathway_Analysis_GSEA_WaterVsBlum.pdf", 
+    plot     = final_figure, 
+    width    = 10, 
+    height   = calc_height, 
+    units    = "in"
   )
-
-# Save figure file
-ggsave(
-  filename = "04-results/Figure_Pathway_Analysis_Hallmark_GSEA_WaterVsBlum.png", 
-  plot     = final_figure, 
-  width    = 11, 
-  height   = 9, 
-  units    = "in", 
-  dpi      = 300
-)
-
-message("GSEA workflow completed successfully!")
+}
