@@ -124,7 +124,7 @@ cell_types <- levels(seu_obj)
 for (cell_type in cell_types) {
   cat("\n=== Processing", cell_type, "===\n")
   deg_results[[cell_type]] <- run_pseudobulk_deg(seu_obj, cell_type, 
-                                                 alpha = 0.2, save_results = FALSE)
+                                                 alpha = 0.05, save_results = TRUE)
 }
 
 # ---- Plotting Function: Summary DEG Strip Plot ----
@@ -145,6 +145,8 @@ create_deg_summary_plot <- function(deg_results, cell_types, contrast_name,
       res <- deg_results[[cell_type]]$water_vs_ctrl
     } else if (contrast_name == "MCT-Water vs MCT-Blumeria") {
       res <- deg_results[[cell_type]]$water_vs_blum
+    } else if (contrast_name == "MCT-Blumeria vs MCT-Water") {
+      res <- deg_results[[cell_type]]$blum_vs_water
     } else if (contrast_name == "MCT-Blumeria vs Control") {
       res <- deg_results[[cell_type]]$blum_vs_ctrl
     }
@@ -231,9 +233,15 @@ create_deg_summary_plot <- function(deg_results, cell_types, contrast_name,
 p_water_ctrl <- create_deg_summary_plot(deg_results, rev(cell_types), padj_thresh = 0.05, lfc_thresh = 0.5, "MCT-Water vs Control")
 p_blum_ctrl <- create_deg_summary_plot(deg_results, rev(cell_types), padj_thresh = 0.05, lfc_thresh = 0.5, "MCT-Blumeria vs Control")
 p_water_blum <- create_deg_summary_plot(deg_results, rev(cell_types), padj_thresh = 0.05, lfc_thresh = 0.5, "MCT-Water vs MCT-Blumeria")
-
+p_blum_water <- create_deg_summary_plot(
+  deg_results, 
+  rev(cell_types), 
+  padj_thresh = 0.05, 
+  lfc_thresh = 0.5, 
+  "MCT-Blumeria vs MCT-Water"
+)
 # Combine main comparators side-by-side
-p_combined <- (p_water_ctrl | p_blum_ctrl)
+p_combined <- (p_water_ctrl | p_water_blum)
 
 # Setup layout margins and turn off clipping so right-side text (UP/DOWN) renders outside the bounds
 p_combined <- p_combined +
@@ -245,11 +253,17 @@ ggsave("04-results/Differential_Expression_Plot.png", plot = p_combined, width =
 ggsave("04-results/Differential_Expression_Plot_water_vs_ctrl.png", plot = p_water_ctrl, width = 7, height = 4, units = "in", dpi = 300)
 ggsave("04-results/Differential_Expression_Plot_blum_vs_ctrl.png", plot = p_blum_ctrl, width = 7, height = 4, units = "in", dpi = 300)
 ggsave("04-results/Differential_Expression_Plot_water_vs_blum.png", plot = p_water_blum, width = 7, height = 4, units = "in", dpi = 300)
+ggsave("04-results/Differential_Expression_Plot_blum_vs_water.png", plot = p_blum_water, width = 7, height = 4, units = "in", dpi = 300)
 
 # ---- Run and Save Target Cell Type Results ----
 # Run full analysis on target clusters and save RDS files for downstream processing
-run_pseudobulk_deg(seu_obj, "Cardiomyocyte", alpha = 0.2, save_results = TRUE)
-run_pseudobulk_deg(seu_obj, "Macrophage", alpha = 0.2, save_results = TRUE)
+run_pseudobulk_deg(seu_obj, "Cardiomyocyte", save_results = TRUE)
+run_pseudobulk_deg(seu_obj, "Fibroblast", save_results = TRUE)
+run_pseudobulk_deg(seu_obj, "Macrophage", save_results = TRUE)
+run_pseudobulk_deg(seu_obj, "Monocyte", save_results = TRUE)
+run_pseudobulk_deg(seu_obj, "Dendritic Cell", save_results = TRUE)
+run_pseudobulk_deg(seu_obj, "Neutrophil", save_results = TRUE)
+
 
 # ---- Export Significant Genes for ShinyGO ----
 # Helper function to extract gene symbols based on thresholds and write .txt files
